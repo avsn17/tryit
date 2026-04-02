@@ -167,13 +167,6 @@ The central hub linking all projects. Think of it as the launch pad — a place 
 
 ## 📡 github stats
 
-<div align="center">
-
-<img src="https://github-readme-stats.vercel.app/api?username=avsn17&show_icons=true&theme=tokyonight&hide_border=true&bg_color=0d0d1a&title_color=ff85c8&icon_color=c8b4ff&text_color=e8d5ff&ring_color=ff85c8" height="165"/>
-&nbsp;
-<img src="https://github-readme-stats.vercel.app/api/top-langs/?username=avsn17&layout=compact&theme=tokyonight&hide_border=true&bg_color=0d0d1a&title_color=ff85c8&text_color=e8d5ff" height="165"/>
-
-</div>
 
 ---
 

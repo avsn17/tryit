@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>✦ tryit — cosmic study station</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Pinyon+Script&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg:#0a0614; --surface:#12091f; --panel:#160b24; --panel2:#1c0f2e;
+  --border:#3a1a5e; --border-soft:#2a1244;
+  --pink:#ff85c8; --pink-dim:#e060a8; --pink-faint:rgba(255,133,200,0.08);
+  --rose:#ff4488; --lavender:#c8a0ff; --lavender-dim:#a87ae0; --lavender-faint:rgba(200,160,255,0.08);
+  --teal:#60ffd4; --amber:#ffd080;
+  --text:#f0deff; --text-dim:#9a7ab8; --muted:#5a4070;
+  --glow-pink:0 0 20px rgba(255,133,200,0.3),0 0 50px rgba(255,133,200,0.1);
+  --glow-lav:0 0 20px rgba(200,160,255,0.3),0 0 50px rgba(200,160,255,0.1);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{
+  background:var(--bg);color:var(--text);
+  font-family:'DM Mono',monospace;min-height:100vh;
+  display:flex;flex-direction:column;align-items:center;
+  padding:0 16px 80px;position:relative;overflow-x:hidden;
+}
+body::before{
+  content:'';pointer-events:none;position:fixed;inset:0;
+  background:repeating-linear-gradient(to bottom,transparent 0,transparent 3px,rgba(255,133,200,0.015) 3px,rgba(255,133,200,0.015) 4px);
+  z-index:9999;
+}
+
+/* ── STARS BG ── */
+#starfield{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden;}
+.star{position:absolute;border-radius:50%;animation:twinkle var(--d) ease-in-out infinite;animation-delay:var(--dl);}
+@keyframes twinkle{0%,100%{opacity:0.2;transform:scale(0.8);}50%{opacity:1;transform:scale(1.2);}}
+.sp{position:absolute;opacity:0;animation:floatUp var(--dur) ease-in infinite;animation-delay:var(--delay);font-size:var(--sz);}
+@keyframes floatUp{0%{opacity:0;transform:translateY(0) rotate(0deg);}30%{opacity:0.4;}80%{opacity:0.1;}100%{opacity:0;transform:translateY(-80vh) rotate(360deg);}}
+
+/* ── BOOT ── */
+#boot{position:fixed;inset:0;background:var(--bg);z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;transition:opacity 0.7s ease;}
+#boot.hidden{opacity:0;pointer-events:none;}
+.boot-logo{font-family:'Pinyon Script',cursive;font-size:clamp(3rem,10vw,6rem);color:var(--pink);text-shadow:var(--glow-pink);animation:bootPulse 1.8s ease-in-out infinite;}
+@keyframes bootPulse{0%,100%{opacity:0.7;transform:scale(0.97);}50%{opacity:1;transform:scale(1);}}
+.boot-lines{width:min(420px,90vw);margin-top:24px;font-size:0.65rem;color:var(--text-dim);letter-spacing:1px;}
+.boot-line{opacity:0;transform:translateX(-6px);transition:opacity 0.3s,transform 0.3s;padding:2px 0;}
+.boot-line.show{opacity:1;transform:none;}
+.boot-line .ok{color:var(--teal);}.boot-line .warn{color:var(--amber);}
+.boot-bar-wrap{width:min(420px,90vw);height:3px;background:var(--border-soft);border-radius:2px;margin-top:14px;overflow:hidden;}
+.boot-bar{height:100%;width:0%;background:linear-gradient(90deg,var(--pink),var(--lavender),var(--teal));border-radius:2px;transition:width 0.25s ease;}
+
+/* ── MAIN ── */
+#main{width:100%;display:flex;flex-direction:column;align-items:center;padding-top:28px;opacity:0;transform:translateY(12px);transition:opacity 0.6s,transform 0.6s;}
+#main.visible{opacity:1;transform:none;}
+
+/* ── HEADER ── */
+.header{width:100%;max-width:960px;display:flex;flex-direction:column;align-items:center;margin-bottom:16px;position:relative;z-index:10;}
+.header-script{font-family:'Pinyon Script',cursive;font-size:clamp(2.4rem,8vw,4.2rem);background:linear-gradient(135deg,var(--pink),var(--lavender),var(--teal));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-shadow:none;line-height:1.1;margin-bottom:4px;letter-spacing:2px;}
+.header-mono{font-size:0.62rem;color:var(--text-dim);letter-spacing:4px;text-transform:uppercase;}
+.header-mono span{color:var(--lavender);}
+.deco-strip{width:100%;max-width:960px;text-align:center;font-size:0.55rem;color:var(--muted);letter-spacing:8px;margin-bottom:8px;position:relative;z-index:10;}
+
+/* ── NAV PILLS ── */
+.nav-pills{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin-bottom:16px;position:relative;z-index:10;}
+.nav-pill{background:none;border:1px solid var(--border);color:var(--text-dim);font-family:'DM Mono',monospace;font-size:0.7rem;padding:7px 18px;cursor:pointer;letter-spacing:1px;border-radius:20px;transition:all 0.2s;}
+.nav-pill:hover{border-color:var(--pink-dim);color:var(--text);}
+.nav-pill.active{background:linear-gradient(135deg,var(--pink-faint),var(--lavender-faint));border-color:var(--pink);color:var(--pink);box-shadow:var(--glow-pink);}
+
+/* ── WINDOW CHROME ── */
+.win-chrome{width:100%;max-width:960px;background:var(--panel2);border:1px solid var(--border);border-radius:12px 12px 0 0;padding:10px 18px;display:flex;align-items:center;justify-content:space-between;position:relative;z-index:10;}
+.win-dots{display:flex;gap:7px;}
+.wd{width:12px;height:12px;border-radius:50%;}
+.wd.r{background:#ff6b8a;}.wd.y{background:#ffcf77;}.wd.g{background:#60ffd4;}
+.win-title{font-size:0.65rem;color:var(--text-dim);letter-spacing:2px;}
+.win-clock{font-size:0.65rem;color:var(--pink);letter-spacing:1px;}
+.terminal{width:100%;max-width:960px;border:1px solid var(--border);border-top:1px solid var(--border-soft);background:var(--panel);border-radius:0 0 12px 12px;position:relative;z-index:10;box-shadow:0 8px 60px rgba(255,133,200,0.06),0 2px 0 rgba(255,133,200,0.04);}
+
+/* ── BANNER ── */
+.banner{border-bottom:1px solid var(--border-soft);padding:20px 26px 16px;background:linear-gradient(180deg,var(--panel2) 0%,var(--panel) 100%);position:relative;overflow:hidden;}
+.banner::before{content:'✦ ✧ ✦ ✧ ✦ ✧ ✦ ✧ ✦ ✧ ✦ ✧ ✦ ✧ ✦ ✧ ✦ ✧ ✦';position:absolute;top:6px;left:0;right:0;text-align:center;font-size:0.5rem;color:var(--muted);letter-spacing:6px;pointer-events:none;}
+.banner-ascii{font-size:clamp(0.32rem,1.2vw,0.56rem);color:var(--pink);line-height:1.25;white-space:pre;overflow-x:auto;text-align:center;text-shadow:var(--glow-pink);}
+.banner-sub{margin-top:10px;text-align:center;font-size:0.62rem;color:var(--text-dim);letter-spacing:2px;display:flex;flex-wrap:wrap;gap:8px;justify-content:center;}
+.banner-sub em{color:var(--lavender);font-style:normal;}.banner-sub strong{color:var(--pink);font-weight:400;}
+.banner-rank{color:var(--amber);font-size:0.65rem;padding:2px 10px;border:1px solid rgba(255,208,128,0.3);border-radius:20px;}
+.prompt-line{margin-top:10px;font-size:0.7rem;color:var(--text-dim);padding-left:4px;}
+.prompt-line .ps{color:var(--pink);}.prompt-line .pa{color:var(--lavender);}
+.blink{animation:blink 1s step-start infinite;}
+@keyframes blink{50%{opacity:0;}}
+
+/* ── SECTION ── */
+.section{padding:22px 26px 0;}
+.section-label{font-size:0.58rem;letter-spacing:3px;color:var(--pink-dim);text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:10px;}
+.section-label .sl-icon{color:var(--pink);}.section-label::after{content:'';flex:1;border-top:1px dashed var(--border);}
+.panel{display:none;}.panel.active{display:block;}
+
+/* ── INPUTS ── */
+.field-group{display:flex;flex-direction:column;gap:5px;flex:1;min-width:160px;}
+.field-label{font-size:0.58rem;letter-spacing:2px;color:var(--text-dim);text-transform:uppercase;}
+input[type="text"],input[type="date"],select,textarea{
+  background:var(--surface);border:1px solid var(--border);color:var(--text);
+  font-family:'DM Mono',monospace;font-size:0.78rem;padding:8px 12px;border-radius:8px;outline:none;width:100%;
+  transition:border-color 0.2s,box-shadow 0.2s;
+}
+input:focus,select:focus,textarea:focus{border-color:var(--pink-dim);box-shadow:0 0 0 3px rgba(255,133,200,0.12);}
+input::placeholder,textarea::placeholder{color:var(--muted);}
+select option{background:var(--surface);}
+textarea{resize:vertical;min-height:120px;line-height:1.7;}
+.note-meta{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;}
+.btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;}
+.btn{
+  background:linear-gradient(135deg,var(--pink-faint),var(--lavender-faint));
+  border:1px solid var(--pink-dim);color:var(--pink);
+  font-family:'DM Mono',monospace;font-size:0.68rem;padding:8px 18px;
+  cursor:pointer;letter-spacing:1px;border-radius:20px;transition:all 0.2s;
+}
+.btn:hover{box-shadow:var(--glow-pink);transform:translateY(-1px);}
+.btn:active{transform:none;}
+.btn.lav{border-color:var(--lavender-dim);color:var(--lavender);background:var(--lavender-faint);}
+.btn.teal{border-color:var(--teal);color:var(--teal);background:rgba(96,255,212,0.05);}
+.btn.danger{border-color:#5a2030;color:#ff6090;background:rgba(255,68,136,0.05);}
+
+/* ── NOTES ── */
+.entries{margin-top:18px;display:flex;flex-direction:column;gap:10px;}
+.entry-card{border:1px solid var(--border-soft);background:var(--surface);border-radius:10px;padding:14px 16px;transition:border-color 0.2s,transform 0.15s;position:relative;}
+.entry-card:hover{border-color:var(--pink-dim);transform:translateX(3px);}
+.ec-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;}
+.ec-title{font-size:0.82rem;color:var(--pink);}
+.ec-tag{font-size:0.58rem;padding:2px 10px;border:1px solid var(--border);border-radius:10px;color:var(--lavender);letter-spacing:1px;}
+.ec-body{font-size:0.7rem;color:var(--text-dim);line-height:1.6;white-space:pre-wrap;word-break:break-word;}
+.ec-date{font-size:0.58rem;color:var(--muted);margin-top:6px;}
+.ec-del{position:absolute;top:10px;right:12px;background:none;border:none;color:var(--muted);font-size:0.75rem;cursor:pointer;opacity:0;transition:opacity 0.15s;}
+.entry-card:hover .ec-del{opacity:1;}.ec-del:hover{color:var(--rose);}
+
+/* ── COSMIC TIMER ── */
+.timer-wrap{text-align:center;padding:28px 0 20px;}
+.timer-ring{display:inline-block;position:relative;width:200px;height:200px;margin-bottom:16px;}
+.timer-ring svg{transform:rotate(-90deg);}
+.ring-bg{stroke:var(--border);fill:none;stroke-width:6;}
+.ring-fill{stroke:var(--pink);fill:none;stroke-width:6;stroke-linecap:round;stroke-dasharray:565;stroke-dashoffset:0;filter:drop-shadow(0 0 8px rgba(255,133,200,0.5));transition:stroke-dashoffset 0.8s ease,stroke 0.4s;}
+.ring-fill.break{stroke:var(--lavender);filter:drop-shadow(0 0 8px rgba(200,160,255,0.5));}
+.ring-fill.kirby{stroke:var(--teal);filter:drop-shadow(0 0 8px rgba(96,255,212,0.5));}
+.timer-inner{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.timer-digits{font-family:'Playfair Display',serif;font-size:2.8rem;color:var(--pink);line-height:1;letter-spacing:2px;text-shadow:var(--glow-pink);}
+.timer-label{font-size:0.56rem;letter-spacing:3px;color:var(--text-dim);margin-top:4px;text-transform:uppercase;}
+.kirby-slide{font-size:1.6rem;display:inline-block;transition:margin-left 0.8s ease;animation:kirbyBob 1.5s ease-in-out infinite;}
+@keyframes kirbyBob{0%,100%{transform:translateY(0);}50%{transform:translateY(-4px);}}
+.timer-presets{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin-top:14px;}
+.preset-btn{background:none;border:1px solid var(--border);color:var(--text-dim);font-family:'DM Mono',monospace;font-size:0.62rem;padding:5px 14px;cursor:pointer;border-radius:20px;transition:all 0.2s;letter-spacing:1px;}
+.preset-btn:hover{border-color:var(--lavender-dim);color:var(--lavender);}
+.sessions-log{margin-top:20px;border-top:1px dashed var(--border);padding-top:14px;}
+.session-row{display:flex;justify-content:space-between;font-size:0.65rem;padding:5px 0;border-bottom:1px solid var(--border-soft);color:var(--text-dim);}
+.session-row span:first-child{color:var(--teal);}
+
+/* ── WISDOM CHAT ── */
+.wisdom-wrap{border-top:1px dashed var(--border);padding-top:18px;margin-top:18px;}
+.wisdom-input-row{display:flex;gap:8px;margin-bottom:14px;}
+.wisdom-messages{display:flex;flex-direction:column;gap:8px;max-height:200px;overflow-y:auto;padding-right:4px;}
+.wm-bubble{padding:10px 14px;border-radius:12px;font-size:0.7rem;line-height:1.6;}
+.wm-kirby{background:var(--pink-faint);border:1px solid rgba(255,133,200,0.2);color:var(--text);border-radius:12px 12px 12px 4px;}
+.wm-user{background:var(--lavender-faint);border:1px solid rgba(200,160,255,0.2);color:var(--lavender);text-align:right;border-radius:12px 12px 4px 12px;}
+.wm-name{font-size:0.55rem;color:var(--pink);letter-spacing:2px;margin-bottom:4px;}
+
+/* ── GALACTIC RANKS ── */
+.ranks-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-top:12px;}
+.rank-card{background:var(--surface);border:1px solid var(--border-soft);border-radius:10px;padding:10px 12px;text-align:center;}
+.rank-card.current{border-color:var(--amber);box-shadow:0 0 12px rgba(255,208,128,0.2);}
+.rank-emoji{font-size:1.4rem;display:block;margin-bottom:4px;}
+.rank-name{font-size:0.62rem;color:var(--lavender);letter-spacing:1px;display:block;}
+.rank-dist{font-size:0.58rem;color:var(--muted);}
+
+/* ── FLASHCARDS ── */
+.card-area{display:flex;flex-direction:column;align-items:center;gap:14px;}
+.flashcard{width:100%;max-width:560px;min-height:150px;border:1px solid var(--border);background:var(--surface);border-radius:16px;padding:30px 28px;text-align:center;cursor:pointer;transition:border-color 0.2s,box-shadow 0.2s;position:relative;}
+.flashcard:hover{border-color:var(--pink-dim);box-shadow:var(--glow-pink);}
+.flashcard-inner{transition:transform 0.45s cubic-bezier(0.4,0,0.2,1);transform-style:preserve-3d;position:relative;min-height:90px;}
+.flashcard.flipped .flashcard-inner{transform:rotateY(180deg);}
+.fc-front,.fc-back{backface-visibility:hidden;position:absolute;inset:0;display:flex;align-items:center;justify-content:center;}
+.fc-front{font-size:1rem;color:var(--pink);font-family:'Playfair Display',serif;font-style:italic;}
+.fc-back{transform:rotateY(180deg);font-size:0.85rem;color:var(--lavender);}
+.fc-hint{position:absolute;bottom:10px;right:14px;font-size:0.58rem;color:var(--muted);letter-spacing:1px;}
+.fc-counter{font-size:0.65rem;color:var(--text-dim);}
+.fc-nav{display:flex;gap:10px;align-items:center;}
+.card-adder{width:100%;max-width:560px;border:1px dashed var(--border);border-radius:12px;padding:16px;margin-top:8px;}
+.card-adder-row{display:flex;gap:8px;}
+
+/* ── TODOS ── */
+.todo-input-row{display:flex;gap:8px;margin-bottom:14px;}
+.todo-input-row input{flex:1;}
+.todo-list{display:flex;flex-direction:column;gap:7px;}
+.todo-item{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border:1px solid var(--border-soft);background:var(--surface);border-radius:10px;transition:border-color 0.15s,opacity 0.2s;}
+.todo-item.done{opacity:0.4;}
+.todo-check{width:18px;height:18px;border:1.5px solid var(--pink-dim);border-radius:50%;cursor:pointer;flex-shrink:0;margin-top:1px;position:relative;background:none;transition:background 0.15s;}
+.todo-item.done .todo-check{background:var(--pink-faint);border-color:var(--pink);}
+.todo-item.done .todo-check::after{content:'✓';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:0.65rem;color:var(--pink);}
+.todo-text{flex:1;font-size:0.76rem;line-height:1.5;color:var(--text);word-break:break-word;}
+.todo-item.done .todo-text{text-decoration:line-through;color:var(--text-dim);}
+.todo-del{background:none;border:none;color:var(--muted);cursor:pointer;font-size:0.8rem;padding:0;flex-shrink:0;}
+.todo-del:hover{color:var(--rose);}
+
+/* ── MOOD ── */
+.mood-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;}
+.mood-btn{background:none;border:1.5px solid var(--border);border-radius:12px;padding:8px 14px;font-size:1.1rem;cursor:pointer;transition:all 0.2s;display:flex;flex-direction:column;align-items:center;gap:2px;}
+.mood-btn span{font-size:0.55rem;color:var(--text-dim);letter-spacing:1px;}
+.mood-btn:hover,.mood-btn.selected{border-color:var(--pink);background:var(--pink-faint);transform:translateY(-2px);}
+.mood-log{display:flex;flex-direction:column;gap:6px;margin-top:12px;}
+.mood-entry{display:flex;align-items:center;gap:10px;font-size:0.68rem;color:var(--text-dim);padding:6px 10px;border:1px solid var(--border-soft);border-radius:8px;background:var(--surface);}
+.mood-entry .me-emoji{font-size:1.1rem;}
+.mood-entry .me-note{flex:1;color:var(--text);}
+.mood-entry .me-time{color:var(--muted);font-size:0.58rem;}
+
+/* ── MASCOT ── */
+.mascot-wrap{position:fixed;bottom:24px;right:24px;z-index:1000;display:flex;flex-direction:column;align-items:flex-end;gap:8px;}
+.mascot-bubble{background:var(--surface);border:1px solid var(--border);border-radius:16px 16px 4px 16px;padding:10px 14px;font-size:0.68rem;color:var(--text);max-width:240px;line-height:1.5;box-shadow:var(--glow-lav);opacity:0;transform:translateY(6px) scale(0.95);transition:opacity 0.3s,transform 0.3s;pointer-events:none;}
+.mascot-bubble.show{opacity:1;transform:none;pointer-events:auto;}
+.mascot-bubble .mb-name{font-size:0.55rem;color:var(--pink);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px;}
+.mascot-btn{background:none;border:none;cursor:pointer;padding:0;transition:transform 0.2s;}
+.mascot-btn:hover{transform:scale(1.08);}
+.mascot-notif{position:absolute;top:-4px;right:-4px;width:12px;height:12px;background:var(--rose);border-radius:50%;border:2px solid var(--bg);display:none;animation:notifPulse 1.5s infinite;}
+.mascot-notif.show{display:block;}
+@keyframes notifPulse{0%,100%{transform:scale(1);}50%{transform:scale(1.2);}}
+.mascot-svg{width:68px;height:68px;filter:drop-shadow(0 4px 14px rgba(255,133,200,0.35));}
+
+/* ── QUOTE BAR ── */
+.quote-bar{width:100%;max-width:960px;position:relative;z-index:10;margin-top:10px;padding:12px 20px;background:var(--surface);border:1px solid var(--border-soft);border-radius:10px;display:flex;align-items:center;gap:12px;font-size:0.68rem;color:var(--text-dim);font-style:italic;cursor:pointer;transition:border-color 0.2s;}
+.quote-bar:hover{border-color:var(--pink-dim);}
+.quote-bar .qb-icon{color:var(--pink);font-size:0.8rem;flex-shrink:0;}
+.quote-bar .qb-text{flex:1;}
+.quote-bar .qb-refresh{color:var(--muted);font-size:0.65rem;flex-shrink:0;}
+
+/* ── STATUS BAR ── */
+.statusbar{width:100%;max-width:960px;display:flex;align-items:center;justify-content:space-between;font-size:0.6rem;color:var(--text-dim);padding:7px 18px;border:1px solid var(--border);border-top:none;background:var(--surface);letter-spacing:1px;flex-wrap:wrap;gap:4px;border-radius:0 0 12px 12px;position:relative;z-index:10;}
+.sb-item{display:flex;align-items:center;gap:5px;}
+.sb-dot{width:5px;height:5px;border-radius:50%;background:var(--pink);animation:pulse 2.5s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.2;}}
+
+.empty-state{text-align:center;padding:36px 0;color:var(--text-dim);font-size:0.72rem;letter-spacing:1px;}
+.empty-state .em-icon{font-size:1.8rem;margin-bottom:8px;}
+::-webkit-scrollbar{width:4px;height:4px;}::-webkit-scrollbar-track{background:var(--bg);}::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+@media(max-width:600px){.note-meta,.card-adder-row{flex-direction:column;}.mascot-wrap{bottom:12px;right:12px;}.banner-ascii{font-size:0.28rem;}}
+</style>
+</head>
+<body>
+
+<!-- ══ STARFIELD ══ -->
+<div id="starfield"></div>
+
+<!-- ══ BOOT SCREEN ══ -->
+<div id="boot">
+  <div class="boot-logo">tryit ✦</div>
+  <div class="boot-lines" id="bootLines"></div>
+  <div class="boot-bar-wrap"><div class="boot-bar" id="bootBar"></div></div>
+</div>
+
+<!-- ══ MASCOT — MOCHI ══ -->
+<div class="mascot-wrap" id="mascotWrap">
+  <div class="mascot-bubble" id="mascotBubble">
+    <div class="mb-name">✦ mochi</div>
+    <div id="mascotText">hi! i'm mochi ♡ your cosmic study companion~</div>
+  </div>
+  <button class="mascot-btn" onclick="mascotClick()" title="Click Mochi!">
+    <div class="mascot-notif" id="mascotNotif"></div>
+    <svg class="mascot-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="50" cy="58" rx="34" ry="28" fill="#2a0a3e" stroke="#ff85c8" stroke-width="1.5"/>
+      <circle cx="50" cy="36" r="26" fill="#1e0630" stroke="#ff85c8" stroke-width="1.5"/>
+      <ellipse cx="28" cy="16" rx="8" ry="10" fill="#1e0630" stroke="#ff85c8" stroke-width="1.5"/>
+      <ellipse cx="72" cy="16" rx="8" ry="10" fill="#1e0630" stroke="#ff85c8" stroke-width="1.5"/>
+      <ellipse cx="28" cy="16" rx="4.5" ry="6.5" fill="#c8a0ff"/>
+      <ellipse cx="72" cy="16" rx="4.5" ry="6.5" fill="#c8a0ff"/>
+      <ellipse class="eye" cx="40" cy="34" rx="5" ry="5.5" fill="#c8a0ff"/>
+      <ellipse class="eye" cx="60" cy="34" rx="5" ry="5.5" fill="#c8a0ff"/>
+      <circle cx="42" cy="32" r="1.8" fill="white"/>
+      <circle cx="62" cy="32" r="1.8" fill="white"/>
+      <ellipse cx="32" cy="41" rx="7" ry="4" fill="#ff85c8" opacity="0.4"/>
+      <ellipse cx="68" cy="41" rx="7" ry="4" fill="#ff85c8" opacity="0.4"/>
+      <path d="M44 44 Q50 49 56 44" stroke="#ff85c8" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+      <path d="M43 8 Q50 3 57 8 Q50 13 43 8Z" fill="#ff85c8"/>
+      <circle cx="50" cy="8" r="2.5" fill="#c8a0ff"/>
+      <ellipse cx="22" cy="70" rx="9" ry="6" fill="#2a0a3e" stroke="#ff85c8" stroke-width="1.2"/>
+      <ellipse cx="78" cy="70" rx="9" ry="6" fill="#2a0a3e" stroke="#ff85c8" stroke-width="1.2"/>
+      <rect x="35" y="72" width="30" height="20" rx="2" fill="#1e0630" stroke="#c8a0ff" stroke-width="1.2"/>
+      <line x1="50" y1="72" x2="50" y2="92" stroke="#c8a0ff" stroke-width="1"/>
+      <line x1="38" y1="78" x2="48" y2="78" stroke="#60ffd4" stroke-width="0.8" opacity="0.7"/>
+      <line x1="38" y1="82" x2="48" y2="82" stroke="#60ffd4" stroke-width="0.8" opacity="0.7"/>
+    </svg>
+  </button>
+</div>
+
+<!-- ══ MAIN ══ -->
+<div id="main">
+  <div class="header">
+    <div class="header-script">tryit ✦ cosmic station</div>
+    <div class="header-mono">✦ <span>kirbs.pomodoro</span> × <span>study.girl</span> × <span>station</span> ✦</div>
+  </div>
+
+  <div class="deco-strip">✦ ✧ ✦ ✧ ✦ ✧ ✦ ✧ ✦ ✧ ✦ ✧ ✦ ✧ ✦ ✧ ✦</div>
+
+  <div class="nav-pills">
+    <button class="nav-pill active" onclick="switchTab('timer')">🍅 cosmic timer</button>
+    <button class="nav-pill" onclick="switchTab('notes')">✦ notes</button>
+    <button class="nav-pill" onclick="switchTab('cards')">✧ flashcards</button>
+    <button class="nav-pill" onclick="switchTab('tasks')">✿ tasks</button>
+    <button class="nav-pill" onclick="switchTab('mood')">♡ mood</button>
+    <button class="nav-pill" onclick="switchTab('ranks')">🌌 galaxy</button>
+  </div>
+
+  <div class="win-chrome">
+    <div class="win-dots"><div class="wd r"></div><div class="wd y"></div><div class="wd g"></div></div>
+    <div class="win-title">✦ tryit — cosmic-os 1.0 — <span id="sessionIdDisp">—</span></div>
+    <div class="win-clock" id="clockDisplay">--:--:--</div>
+  </div>
+
+  <div class="terminal">
+    <div class="banner">
+      <div class="banner-ascii">
+ ████████╗██████╗ ██╗   ██╗██╗████████╗
+    ██╔══╝██╔══██╗╚██╗ ██╔╝██║╚══██╔══╝
+    ██║   ██████╔╝ ╚████╔╝ ██║   ██║   
+    ██║   ██╔══██╗  ╚██╔╝  ██║   ██║   
+    ██║   ██║  ██║   ██║   ██║   ██║   
+    ╚═╝   ╚═╝  ╚═╝   ╚═╝   ╚═╝   ╚═╝   </div>
+      <div class="banner-sub">
+        <span>kernel: <em>cosmic-os 1.0</em></span>
+        <span>✦</span>
+        <span>pilot: <strong>kirbs</strong></span>
+        <span>✦</span>
+        <span>distance: <strong id="distDisp">0</strong>m</span>
+        <span>✦</span>
+        <span class="banner-rank" id="rankDisp">🛸 Space Cadet</span>
+        <span>✦</span>
+        <span>sessions: <strong id="sessCountDisp">0</strong></span>
+      </div>
+      <div class="prompt-line">
+        <span class="ps">♡ kirbs@cosmic</span>:<span class="pa">~/tryit</span>$ <span id="typedPrompt"></span><span class="blink">▌</span>
+      </div>
+    </div>
+
+    <div class="section">
+
+      <!-- ══ COSMIC TIMER ══ -->
+      <div id="panel-timer" class="panel active">
+        <div class="section-label"><span class="sl-icon">🍅</span> cosmic pomodoro</div>
+        <div class="timer-wrap">
+          <div style="font-size:1.8rem;margin-bottom:8px;" id="kirbySlider">
+            <span class="kirby-slide">🌸</span>
+          </div>
+          <div class="timer-ring">
+            <svg width="200" height="200" viewBox="0 0 200 200">
+              <circle class="ring-bg" cx="100" cy="100" r="90"/>
+              <circle class="ring-fill" id="ringFill" cx="100" cy="100" r="90"/>
+            </svg>
+            <div class="timer-inner">
+              <div class="timer-digits" id="timerDisplay">25:00</div>
+              <div class="timer-label" id="timerLabel">focus session</div>
+            </div>
+          </div>
+          <div class="timer-presets">
+            <button class="preset-btn" onclick="setTimer(25,'focus session',false)">pomodoro 25m</button>
+            <button class="preset-btn" onclick="setTimer(5,'short break ✦',true)">break 5m</button>
+            <button class="preset-btn" onclick="setTimer(15,'long break ✦',true)">break 15m</button>
+            <button class="preset-btn" onclick="setTimer(45,'deep work',false)">deep 45m</button>
+            <button class="preset-btn" onclick="setTimer(90,'flow state',false)">flow 90m</button>
+          </div>
+          <div style="display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-top:16px;">
+            <button class="btn" onclick="toggleTimer()">▶ start / pause</button>
+            <button class="btn danger" onclick="resetTimer()">↺ reset</button>
+          </div>
+        </div>
+
+        <!-- WISDOM CHAT -->
+        <div class="wisdom-wrap">
+          <div class="section-label"><span class="sl-icon">💬</span> wisdom chat (kirbs mode)</div>
+          <div class="wisdom-messages" id="wisdomMessages">
+            <div class="wm-bubble wm-kirby"><div class="wm-name">✦ kirbs</div>welcome, cosmic pilot. ask me anything or type a category: <em>bronte · kant · lyrics · heroic · vibe · kirby · wisdom</em></div>
+          </div>
+          <div class="wisdom-input-row" style="margin-top:10px;">
+            <input type="text" id="wisdomInput" placeholder="type anything or a category..." onkeydown="if(event.key==='Enter')sendWisdom()"/>
+            <button class="btn teal" onclick="sendWisdom()">✦ send</button>
+          </div>
+        </div>
+
+        <div class="sessions-log">
+          <div class="section-label"><span class="sl-icon">✧</span> session log</div>
+          <div id="sessionLog"><div class="empty-state" style="padding:16px 0;font-size:0.65rem;">no sessions yet — start your first! ♡</div></div>
+        </div>
+      </div>
+
+      <!-- ══ NOTES ══ -->
+      <div id="panel-notes" class="panel">
+        <div class="section-label"><span class="sl-icon">✦</span> new entry</div>
+        <div class="note-meta">
+          <div class="field-group" style="flex:2;min-width:200px;">
+            <div class="field-label">subject / title</div>
+            <input type="text" id="noteTitle" placeholder="e.g. Calculus — ch.4 ♡"/>
+          </div>
+          <div class="field-group">
+            <div class="field-label">category</div>
+            <select id="noteTag"><option>lecture</option><option>reading</option><option>summary</option><option>formula</option><option>question</option><option>idea</option><option>other</option></select>
+          </div>
+          <div class="field-group">
+            <div class="field-label">date</div>
+            <input type="date" id="noteDate"/>
+          </div>
+        </div>
+        <textarea id="noteBody" placeholder="start typing your notes here...&#10;&#10;ctrl + enter to save ♡"></textarea>
+        <div class="btn-row">
+          <button class="btn" onclick="saveNote()">✦ save note</button>
+          <button class="btn lav" onclick="exportNotes()">⬇ export .txt</button>
+          <button class="btn danger" onclick="clearAll()">✕ clear all</button>
+        </div>
+        <div class="section-label" style="margin-top:26px;"><span class="sl-icon">✧</span> saved entries</div>
+        <div class="entries" id="entriesList"><div class="empty-state"><div class="em-icon">✦</div>no entries yet</div></div>
+      </div>
+
+      <!-- ══ FLASHCARDS ══ -->
+      <div id="panel-cards" class="panel">
+        <div class="section-label"><span class="sl-icon">✧</span> flashcard deck</div>
+        <div class="card-area">
+          <div id="flashcardBox" class="flashcard" onclick="flipCard()">
+            <div class="flashcard-inner">
+              <div class="fc-front" id="fcFront"><span style="color:var(--muted);font-size:0.72rem;letter-spacing:1px;font-style:normal;">add your first card below ✦</span></div>
+              <div class="fc-back" id="fcBack"></div>
+            </div>
+            <div class="fc-hint">click to flip ✧</div>
+          </div>
+          <div class="fc-counter" id="fcCounter">— / —</div>
+          <div class="fc-nav">
+            <button class="btn" onclick="prevCard()">← prev</button>
+            <button class="btn" onclick="nextCard()">next →</button>
+            <button class="btn lav" onclick="shuffleCards()">✦ shuffle</button>
+          </div>
+          <div class="card-adder">
+            <div class="section-label" style="margin-bottom:10px;"><span class="sl-icon">✦</span> add card</div>
+            <div class="card-adder-row">
+              <div class="field-group"><div class="field-label">front</div><input type="text" id="cardFront" placeholder="Question..."/></div>
+              <div class="field-group"><div class="field-label">back</div><input type="text" id="cardBack" placeholder="Answer..."/></div>
+            </div>
+            <button class="btn" style="margin-top:10px;" onclick="addCard()">✦ add card</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ TASKS ══ -->
+      <div id="panel-tasks" class="panel">
+        <div class="section-label"><span class="sl-icon">✿</span> study checklist</div>
+        <div class="todo-input-row">
+          <input type="text" id="todoInput" placeholder="add a task... ♡" onkeydown="if(event.key==='Enter') addTodo()"/>
+          <button class="btn" onclick="addTodo()">+ add</button>
+        </div>
+        <div class="todo-list" id="todoList"><div class="empty-state"><div class="em-icon">✿</div>add something! ♡</div></div>
+      </div>
+
+      <!-- ══ MOOD ══ -->
+      <div id="panel-mood" class="panel">
+        <div class="section-label"><span class="sl-icon">♡</span> mood check-in</div>
+        <div style="font-size:0.65rem;color:var(--text-dim);margin-bottom:12px;letter-spacing:1px;">how are you feeling right now?</div>
+        <div class="mood-row">
+          <button class="mood-btn" onclick="logMood('✨','radiant')">✨<span>radiant</span></button>
+          <button class="mood-btn" onclick="logMood('🌸','blooming')">🌸<span>blooming</span></button>
+          <button class="mood-btn" onclick="logMood('😊','happy')">😊<span>happy</span></button>
+          <button class="mood-btn" onclick="logMood('😌','calm')">😌<span>calm</span></button>
+          <button class="mood-btn" onclick="logMood('😐','meh')">😐<span>meh</span></button>
+          <button class="mood-btn" onclick="logMood('😴','sleepy')">😴<span>sleepy</span></button>
+          <button class="mood-btn" onclick="logMood('😰','stressed')">😰<span>stressed</span></button>
+          <button class="mood-btn" onclick="logMood('🌧','sad')">🌧<span>sad</span></button>
+        </div>
+        <input type="text" id="moodNote" placeholder="add a note... (optional)" style="margin-top:10px;"/>
+        <div class="section-label" style="margin-top:20px;"><span class="sl-icon">✧</span> mood history</div>
+        <div class="mood-log" id="moodLog"><div class="empty-state" style="padding:16px 0;font-size:0.65rem;">no moods logged yet ♡</div></div>
+      </div>
+
+      <!-- ══ GALAXY / RANKS ══ -->
+      <div id="panel-ranks" class="panel">
+        <div class="section-label"><span class="sl-icon">🌌</span> galactic ranking system</div>
+        <div style="font-size:0.65rem;color:var(--text-dim);margin-bottom:4px;letter-spacing:1px;">10 meters = 1 minute of focus time</div>
+        <div style="font-size:0.72rem;color:var(--amber);margin-bottom:16px;">current distance: <strong id="distDisp2">0</strong>m &nbsp;✦&nbsp; rank: <strong id="rankDisp2">🛸 Space Cadet</strong></div>
+        <div class="ranks-grid" id="ranksGrid"></div>
+        <div class="section-label" style="margin-top:24px;"><span class="sl-icon">💬</span> wisdom categories</div>
+        <div style="font-size:0.65rem;color:var(--text-dim);line-height:2;letter-spacing:1px;">
+          <span style="color:var(--pink);">iro</span> &nbsp;·&nbsp; <span style="color:var(--lavender);">bronte</span> &nbsp;·&nbsp; <span style="color:var(--teal);">kant</span> &nbsp;·&nbsp; <span style="color:var(--amber);">lyrics</span> &nbsp;·&nbsp; <span style="color:var(--pink);">heroic</span> &nbsp;·&nbsp; <span style="color:var(--lavender);">kirby</span> &nbsp;·&nbsp; <span style="color:var(--teal);">vibe</span> &nbsp;·&nbsp; <span style="color:var(--amber);">wisdom</span><br/>
+          <span style="color:var(--muted);">type any category in the wisdom chat — or anything for a random quote.</span>
+        </div>
+      </div>
+
+    </div><!-- /section -->
+    <div style="height:22px;"></div>
+  </div><!-- /terminal -->
+
+  <div class="quote-bar" id="quoteBar" onclick="nextQuote()">
+    <span class="qb-icon">✦</span>
+    <span class="qb-text" id="quoteText">loading inspiration...</span>
+    <span class="qb-refresh">click ↻</span>
+  </div>
+
+  <div class="statusbar">
+    <div class="sb-item"><div class="sb-dot"></div> ♡ cosmic-os online</div>
+    <div class="sb-item" id="sbNotes">notes: 0</div>
+    <div class="sb-item" id="sbCards">cards: 0</div>
+    <div class="sb-item" id="sbTasks">tasks: 0/0</div>
+    <div class="sb-item" id="sbDist">dist: 0m</div>
+    <div class="sb-item" style="color:var(--pink-dim);">made with ♡ by avsn17</div>
+  </div>
+
+</div><!-- /main -->
+
+<script>
+// ══════════════════════════════════
+// STARFIELD
+// ══════════════════════════════════
+const sf = document.getElementById('starfield');
+for(let i=0;i<120;i++){
+  const s=document.createElement('div');s.className='star';
+  const sz=Math.random()*2.5+0.5;
+  s.style.cssText=`left:${Math.random()*100}%;top:${Math.random()*100}%;width:${sz}px;height:${sz}px;background:${['#ff85c8','#c8a0ff','#60ffd4','#ffffff'][Math.floor(Math.random()*4)]};opacity:0.3;--d:${2+Math.random()*5}s;--dl:${Math.random()*5}s;`;
+  sf.appendChild(s);
+}
+const syms=['✦','✧','✿','♡','◇','✩','·'];
+for(let i=0;i<20;i++){
+  const s=document.createElement('div');s.className='sp';
+  s.textContent=syms[Math.floor(Math.random()*syms.length)];
+  s.style.cssText=`left:${Math.random()*100}%;bottom:0%;--dur:${10+Math.random()*16}s;--delay:${Math.random()*16}s;--sz:${0.5+Math.random()*0.7}rem;color:${Math.random()>.5?'var(--pink)':'var(--lavender)'};`;
+  sf.appendChild(s);
+}
+
+// ══════════════════════════════════
+// BOOT
+// ══════════════════════════════════
+const bootMsgs=[
+  ['loading cosmic-os 1.0...','ok'],
+  ['mounting kirbs.pomodoro modules...','ok'],
+  ['initialising mochi companion...','ok'],
+  ['syncing study.girl station...','ok'],
+  ['calibrating galactic ranking system...','ok'],
+  ['loading wisdom database...','ok'],
+  ['brewing cosmic study potion...','warn'],
+  ['all systems ✦ ready — welcome, pilot!','ok'],
+];
+const bootLinesEl=document.getElementById('bootLines');
+const bootBarEl=document.getElementById('bootBar');
+const bootEl=document.getElementById('boot');
+const mainEl=document.getElementById('main');
+function runBoot(){
+  let i=0;
+  function next(){
+    if(i>=bootMsgs.length){
+      bootBarEl.style.width='100%';
+      setTimeout(()=>{bootEl.classList.add('hidden');mainEl.classList.add('visible');setTimeout(()=>{bootEl.style.display='none';initMascot();},700);},400);
+      return;
+    }
+    const [msg,type]=bootMsgs[i];
+    const d=document.createElement('div');d.className='boot-line';
+    d.innerHTML=`<span class="${type}">[${type.toUpperCase()}]</span> ${msg}`;
+    bootLinesEl.appendChild(d);
+    requestAnimationFrame(()=>d.classList.add('show'));
+    bootBarEl.style.width=((i+1)/bootMsgs.length*100)+'%';
+    i++;setTimeout(next,200+Math.random()*120);
+  }
+  next();
+}
+runBoot();
+
+// ══════════════════════════════════
+// CLOCK & SESSION ID
+// ══════════════════════════════════
+function updateClock(){document.getElementById('clockDisplay').textContent=new Date().toTimeString().slice(0,8);}
+setInterval(updateClock,1000);updateClock();
+const sid='TRYIT_'+Math.random().toString(36).slice(2,6).toUpperCase();
+document.getElementById('sessionIdDisp').textContent=sid;
+document.getElementById('noteDate').value=new Date().toISOString().slice(0,10);
+
+// ══════════════════════════════════
+// TYPING PROMPT
+// ══════════════════════════════════
+const prompts=['initialising cosmic-os... ♡','mounting all repos...','loading kirbs & mochi...','galactic systems ready ✦','welcome back, pilot ♡'];
+let pi=0,ci=0;const tp=document.getElementById('typedPrompt');
+function typeNext(){
+  if(pi>=prompts.length)return;
+  if(ci<prompts[pi].length){tp.textContent+=prompts[pi][ci++];setTimeout(typeNext,38);}
+  else{pi++;ci=0;if(pi<prompts.length)setTimeout(()=>{tp.textContent='';typeNext();},700);}
+}
+setTimeout(typeNext,900);
+
+// ══════════════════════════════════
+// TABS
+// ══════════════════════════════════
+function switchTab(name){
+  const names=['timer','notes','cards','tasks','mood','ranks'];
+  document.querySelectorAll('.nav-pill').forEach((t,i)=>t.classList.toggle('active',names[i]===name));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('panel-'+name).classList.add('active');
+  const catMap={timer:'timer',notes:'note',cards:'cards',tasks:'tasks',mood:'mood',ranks:'galaxy'};
+  setTimeout(()=>mascotSay(catMap[name]||'idle'),500);
+  if(name==='ranks')renderRanks();
+}
+
+// ══════════════════════════════════
+// STATE (localStorage)
+// ══════════════════════════════════
+let notes   = JSON.parse(localStorage.getItem('tryit_notes')   || '[]');
+let cards   = JSON.parse(localStorage.getItem('tryit_cards')   || '[]');
+let todos   = JSON.parse(localStorage.getItem('tryit_todos')   || '[]');
+let sessions= JSON.parse(localStorage.getItem('tryit_sess')    || '[]');
+let moods   = JSON.parse(localStorage.getItem('tryit_moods')   || '[]');
+let totalDist= Number(localStorage.getItem('tryit_dist')       || 0);
+
+// ══════════════════════════════════
+// GALACTIC RANKS
+// ══════════════════════════════════
+const RANKS=[
+  {dist:0,   rank:'🛸 Space Cadet'},
+  {dist:100,  rank:'🌙 Moon Walker'},
+  {dist:500,  rank:'☄️ Comet Rider'},
+  {dist:1000, rank:'🚀 Orbit Master'},
+  {dist:2500, rank:'⭐ Star Pilot'},
+  {dist:5000, rank:'🌌 Galactic Overlord'},
+];
+function getCurrentRank(d){
+  let r=RANKS[0];
+  for(const rank of RANKS){if(d>=rank.dist)r=rank;else break;}
+  return r;
+}
+function updateRankDisplay(){
+  const r=getCurrentRank(totalDist);
+  document.getElementById('rankDisp').textContent=r.rank;
+  document.getElementById('distDisp').textContent=totalDist;
+  if(document.getElementById('rankDisp2')){
+    document.getElementById('rankDisp2').textContent=r.rank;
+    document.getElementById('distDisp2').textContent=totalDist;
+  }
+  document.getElementById('sbDist').textContent='dist: '+totalDist+'m';
+}
+function renderRanks(){
+  const grid=document.getElementById('ranksGrid');
+  const cur=getCurrentRank(totalDist);
+  grid.innerHTML=RANKS.map(r=>`
+    <div class="rank-card ${r.rank===cur.rank?'current':''}">
+      <span class="rank-emoji">${r.rank.split(' ')[0]}</span>
+      <span class="rank-name">${r.rank.split(' ').slice(1).join(' ')}</span>
+      <span class="rank-dist">${r.dist}m+</span>
+      ${r.rank===cur.rank?'<span style="font-size:0.55rem;color:var(--amber);margin-top:4px;display:block;">← you are here</span>':''}
+    </div>`).join('');
+}
+
+// ══════════════════════════════════
+// WISDOM DATABASE (kirbs.pomodoro)
+// ══════════════════════════════════
+const WISDOM={
+  bronte:["'Whatever our souls are made of, his and mine are the same.' — Brontë","'I am no bird; and no net ensnares me.' — Charlotte Brontë","'I have dreamed in my life, dreams that have stayed with me ever after.' — Emily Brontë"],
+  kant:["'Act only according to that maxim whereby you can at the same time will that it should become a universal law.' — Kant","'Science is organized knowledge. Wisdom is organized life.' — Kant","'Two things awe me most: the starry sky above, and the moral law within.' — Kant"],
+  lyrics:["'In the middle of the night, I think about you.' ✦","'I want to be your end game.' — Taylor","'I'm a mess, but I'm the mess that you wanted.' ✦","'Lights are off and I lost my friends.' ♡"],
+  heroic:["The cave you fear to enter holds the treasure you seek.","Fall seven times, stand eight.","She who endures, conquers. ✦","The obstacle is the way. Every resistance reveals the path.","Comfort is the enemy of achievement."],
+  kirby:["Inhale the doubts, exhale the stardust. ✦","Even Kirby gets tired — rest is power.","Copy the best from everyone around you, make it your own. ♡","Float above the noise. Eyes on the star."],
+  vibe:["main character energy only ✦","that girl is studying and thriving ♡","we move in silence and we deliver ✦","soft life, strong mind ✿","bloom where you are planted ♡"],
+  wisdom:["The expert in anything was once a beginner.","Progress, not perfection. ✦","Your future self is watching — make her proud. ♡","One focused hour beats eight distracted ones.","Rest is not quitting. It is recharging. ✦"],
+  iro:["'Even in the mud and scum of things, something always, always sings.' — Emerson","'It is not length of life, but depth of life.' — Emerson","Nature never hurries, yet everything is accomplished. ✦"],
+};
+const ALL_QUOTES=Object.values(WISDOM).flat();
+function getWisdomResponse(input){
+  const low=input.toLowerCase().trim();
+  for(const [key,arr] of Object.entries(WISDOM)){
+    if(low.includes(key))return arr[Math.floor(Math.random()*arr.length)];
+  }
+  return ALL_QUOTES[Math.floor(Math.random()*ALL_QUOTES.length)];
+}
+function sendWisdom(){
+  const inp=document.getElementById('wisdomInput');
+  const val=inp.value.trim();
+  const msgs=document.getElementById('wisdomMessages');
+  if(val){
+    const userDiv=document.createElement('div');
+    userDiv.className='wm-bubble wm-user';
+    userDiv.textContent=val;
+    msgs.appendChild(userDiv);
+  }
+  inp.value='';
+  setTimeout(()=>{
+    const resp=getWisdomResponse(val||'wisdom');
+    const kirbyDiv=document.createElement('div');
+    kirbyDiv.className='wm-bubble wm-kirby';
+    kirbyDiv.innerHTML=`<div class="wm-name">✦ kirbs</div>${resp}`;
+    msgs.appendChild(kirbyDiv);
+    msgs.scrollTop=msgs.scrollHeight;
+    showMascot(resp.slice(0,80)+(resp.length>80?'…':''),5000);
+  },400);
+}
+
+// ══════════════════════════════════
+// COSMIC TIMER
+// ══════════════════════════════════
+let timerInterval=null,timerTotal=25*60,timerRemaining=25*60,timerRunning=false,timerBreak=false;
+const KIRBY_CHARS=['🌸','✦','🌸','✿','🌸','💫','🌸','⭐','🌸','🌟','🌸','🚀','🌸','🌌'];
+let kirbyIdx=0;
+
+function setTimer(mins,label,isBreak){
+  resetTimer();timerTotal=timerRemaining=mins*60;timerBreak=isBreak;
+  document.getElementById('timerLabel').textContent=label;
+  document.getElementById('ringFill').className='ring-fill'+(isBreak?' break':'');
+  renderTimer();
+}
+function renderTimer(){
+  const m=String(Math.floor(timerRemaining/60)).padStart(2,'0');
+  const s=String(timerRemaining%60).padStart(2,'0');
+  document.getElementById('timerDisplay').textContent=`${m}:${s}`;
+  const pct=timerRemaining/timerTotal;
+  const circumference=2*Math.PI*90;
+  document.getElementById('ringFill').style.strokeDashoffset=circumference*(1-pct);
+  document.getElementById('ringFill').style.strokeDasharray=circumference;
+  // slide kirby based on progress
+  const prog=Math.floor((1-pct)*KIRBY_CHARS.length);
+  kirbyIdx=Math.min(prog,KIRBY_CHARS.length-1);
+  document.querySelector('#kirbySlider .kirby-slide').textContent=KIRBY_CHARS[kirbyIdx];
+}
+function toggleTimer(){
+  if(timerRunning){clearInterval(timerInterval);timerRunning=false;}
+  else{
+    if(timerRemaining<=0)resetTimer();
+    timerRunning=true;mascotSay('timer');
+    timerInterval=setInterval(()=>{
+      timerRemaining--;renderTimer();
+      if(timerRemaining<=0){
+        clearInterval(timerInterval);timerRunning=false;
+        logSession();mascotSay('timerDone');
+        // add wisdom automatically
+        const resp=ALL_QUOTES[Math.floor(Math.random()*ALL_QUOTES.length)];
+        const msgs=document.getElementById('wisdomMessages');
+        const d=document.createElement('div');
+        d.className='wm-bubble wm-kirby';
+        d.innerHTML=`<div class="wm-name">✦ kirbs — session complete!</div>${resp}`;
+        msgs.appendChild(d);msgs.scrollTop=msgs.scrollHeight;
+      }
+    },1000);
+  }
+}
+function resetTimer(){clearInterval(timerInterval);timerRunning=false;timerRemaining=timerTotal;renderTimer();}
+function logSession(){
+  const mins=Math.round(timerTotal/60);
+  const dist=mins*10;
+  totalDist+=dist;
+  localStorage.setItem('tryit_dist',totalDist);
+  sessions.unshift({label:document.getElementById('timerLabel').textContent,mins,time:new Date().toTimeString().slice(0,5),date:new Date().toLocaleDateString(),dist});
+  if(sessions.length>30)sessions.pop();
+  localStorage.setItem('tryit_sess',JSON.stringify(sessions));
+  renderSessions();updateRankDisplay();updateStatus();
+  document.getElementById('sessCountDisp').textContent=sessions.length;
+}
+function renderSessions(){
+  const el=document.getElementById('sessionLog');
+  if(!sessions.length){el.innerHTML='<div class="empty-state" style="padding:16px 0;font-size:0.65rem;">no sessions yet ♡</div>';return;}
+  el.innerHTML=sessions.slice(0,8).map(s=>`<div class="session-row"><span>${s.label}</span><span>${s.mins}min (+${s.dist}m)</span><span style="color:var(--muted)">${s.date} ${s.time}</span></div>`).join('');
+}
+
+// ══════════════════════════════════
+// QUOTES
+// ══════════════════════════════════
+const QUOTES=[
+  '"the secret of getting ahead is getting started." — mark twain',
+  '"you don\'t have to be great to start, but you have to start to be great."',
+  '"study hard, dream big, stay humble." ✦',
+  '"every expert was once a beginner. keep going ♡"',
+  '"she believed she could, so she did." ✦',
+  '"do something today your future self will thank you for." ♡',
+  '"two things awe me: the starry sky above, and the moral law within." — kant',
+  '"even in the mud and scum of things, something always sings." — emerson',
+  '"the cave you fear holds the treasure you seek."',
+  '"progress, not perfection." ✿',
+];
+let qi=Math.floor(Math.random()*QUOTES.length);
+function nextQuote(){qi=(qi+1)%QUOTES.length;document.getElementById('quoteText').textContent=QUOTES[qi];}
+document.getElementById('quoteText').textContent=QUOTES[qi];
+
+// ══════════════════════════════════
+// MASCOT — MOCHI
+// ══════════════════════════════════
+const MASCOT_MSGS={
+  idle:["psst... don't forget to take breaks! ♡","you're doing amazing, keep going~ ✦","have you had water today? 💧","one step at a time ✿","i believe in you!! ♡","save your notes so you don't lose them~"],
+  note:["ooh a new note! love to see it ✦","writing things down helps you remember~ ♡","your future self will thank you!"],
+  timer:["focus mode! i'll be here cheering ♡","you can do anything for 25 minutes~ ✦","deep breaths... you're in the zone!"],
+  timerDone:["session complete!! so proud of you ♡✦","YAYY! take a break, you earned it ✿","you just got further from the start ✦"],
+  cards:["flashcards are SO effective! ✦","spaced repetition is your best friend~ ♡"],
+  tasks:["a plan is already half the work! ✦","let's check those off!! ♡"],
+  mood:["checking in on yourself is so important ♡","your feelings are always valid~ ✦"],
+  galaxy:["you're a galactic pilot!! ✦","every session adds distance to your journey ♡"],
+  morning:["good morning!! ready to conquer? ✦♡"],
+  afternoon:["afternoon, pilot! keep going~ ✿"],
+  evening:["evening study session? dedicated!! ♡"],
+  night:["late night session? i'm here with you ✦"],
+};
+let mascotTimeout=null,lastMsg='';
+function showMascot(msg,dur=4000){
+  const bubble=document.getElementById('mascotBubble');
+  const text=document.getElementById('mascotText');
+  if(msg===lastMsg)return;lastMsg=msg;
+  text.textContent=msg;bubble.classList.add('show');
+  clearTimeout(mascotTimeout);
+  mascotTimeout=setTimeout(()=>bubble.classList.remove('show'),dur);
+}
+function mascotSay(cat){
+  const arr=MASCOT_MSGS[cat]||MASCOT_MSGS.idle;
+  showMascot(arr[Math.floor(Math.random()*arr.length)],4500);
+}
+function mascotClick(){
+  const btn=document.querySelector('.mascot-btn');
+  btn.style.transform='scale(1.18) rotate(-6deg)';
+  setTimeout(()=>{btn.style.transform='';},200);
+  document.getElementById('mascotNotif').classList.remove('show');
+  mascotSay('idle');
+}
+function initMascot(){
+  const h=new Date().getHours();
+  const cat=h<12?'morning':h<17?'afternoon':h<21?'evening':'night';
+  setTimeout(()=>mascotSay(cat),1200);
+  setInterval(()=>document.getElementById('mascotNotif').classList.add('show'),3*60*1000);
+}
+
+// ══════════════════════════════════
+// NOTES
+// ══════════════════════════════════
+function saveNote(){
+  const title=document.getElementById('noteTitle').value.trim();
+  const body=document.getElementById('noteBody').value.trim();
+  const tag=document.getElementById('noteTag').value;
+  const date=document.getElementById('noteDate').value;
+  if(!title&&!body)return;
+  notes.unshift({id:Date.now(),title:title||'(untitled)',body,tag,date:date||new Date().toISOString().slice(0,10)});
+  localStorage.setItem('tryit_notes',JSON.stringify(notes));
+  document.getElementById('noteTitle').value='';document.getElementById('noteBody').value='';
+  renderNotes();updateStatus();mascotSay('note');
+}
+function renderNotes(){
+  const el=document.getElementById('entriesList');
+  if(!notes.length){el.innerHTML='<div class="empty-state"><div class="em-icon">✦</div>no entries yet</div>';return;}
+  el.innerHTML=notes.map((n,i)=>`<div class="entry-card"><div class="ec-head"><div class="ec-title">${esc(n.title)}</div><div class="ec-tag">${esc(n.tag)}</div></div><div class="ec-body">${esc(n.body).slice(0,280)}${n.body.length>280?'…':''}</div><div class="ec-date">${n.date}</div><button class="ec-del" onclick="deleteNote(${i},event)">✕</button></div>`).join('');
+}
+function deleteNote(i,e){e.stopPropagation();notes.splice(i,1);localStorage.setItem('tryit_notes',JSON.stringify(notes));renderNotes();updateStatus();}
+function exportNotes(){
+  const txt=notes.map(n=>`[${n.date}] [${n.tag}] ${n.title}\n${'─'.repeat(40)}\n${n.body}\n`).join('\n');
+  const a=document.createElement('a');a.href='data:text/plain;charset=utf-8,'+encodeURIComponent(txt);a.download='tryit-notes-'+new Date().toISOString().slice(0,10)+'.txt';a.click();
+}
+function clearAll(){if(!confirm('Delete all notes?'))return;notes=[];localStorage.setItem('tryit_notes',JSON.stringify(notes));renderNotes();updateStatus();}
+document.getElementById('noteBody').addEventListener('keydown',e=>{if(e.ctrlKey&&e.key==='Enter')saveNote();});
+
+// ══════════════════════════════════
+// FLASHCARDS
+// ══════════════════════════════════
+let cardIndex=0;
+function renderCard(){
+  const box=document.getElementById('flashcardBox');box.classList.remove('flipped');
+  if(!cards.length){
+    document.getElementById('fcFront').innerHTML='<span style="color:var(--muted);font-size:0.72rem;letter-spacing:1px;font-style:normal;">add your first card below ✦</span>';
+    document.getElementById('fcBack').textContent='';
+    document.getElementById('fcCounter').textContent='— / —';return;
+  }
+  const c=cards[cardIndex];
+  document.getElementById('fcFront').textContent=c.front;
+  document.getElementById('fcBack').textContent=c.back;
+  document.getElementById('fcCounter').textContent=`${cardIndex+1} / ${cards.length}`;
+}
+function flipCard(){if(!cards.length)return;document.getElementById('flashcardBox').classList.toggle('flipped');}
+function nextCard(){if(!cards.length)return;cardIndex=(cardIndex+1)%cards.length;renderCard();}
+function prevCard(){if(!cards.length)return;cardIndex=(cardIndex-1+cards.length)%cards.length;renderCard();}
+function shuffleCards(){for(let i=cards.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[cards[i],cards[j]]=[cards[j],cards[i]];}cardIndex=0;renderCard();}
+function addCard(){
+  const f=document.getElementById('cardFront').value.trim(),b=document.getElementById('cardBack').value.trim();
+  if(!f||!b)return;
+  cards.push({front:f,back:b});localStorage.setItem('tryit_cards',JSON.stringify(cards));
+  document.getElementById('cardFront').value='';document.getElementById('cardBack').value='';
+  cardIndex=cards.length-1;renderCard();updateStatus();mascotSay('cards');
+}
+
+// ══════════════════════════════════
+// TODOS
+// ══════════════════════════════════
+function addTodo(){
+  const v=document.getElementById('todoInput').value.trim();if(!v)return;
+  todos.push({text:v,done:false,id:Date.now()});
+  localStorage.setItem('tryit_todos',JSON.stringify(todos));
+  document.getElementById('todoInput').value='';renderTodos();updateStatus();mascotSay('tasks');
+}
+function toggleTodo(id){
+  const t=todos.find(t=>t.id===id);if(t){t.done=!t.done;if(t.done)setTimeout(()=>showMascot('task done!! you legend ♡✦',3500),200);}
+  localStorage.setItem('tryit_todos',JSON.stringify(todos));renderTodos();updateStatus();
+}
+function deleteTodo(id){todos=todos.filter(t=>t.id!==id);localStorage.setItem('tryit_todos',JSON.stringify(todos));renderTodos();updateStatus();}
+function renderTodos(){
+  const el=document.getElementById('todoList');
+  if(!todos.length){el.innerHTML='<div class="empty-state"><div class="em-icon">✿</div>add something! ♡</div>';return;}
+  el.innerHTML=todos.map(t=>`<div class="todo-item ${t.done?'done':''}"><div class="todo-check" onclick="toggleTodo(${t.id})"></div><div class="todo-text">${esc(t.text)}</div><button class="todo-del" onclick="deleteTodo(${t.id})">✕</button></div>`).join('');
+}
+
+// ══════════════════════════════════
+// MOOD
+// ══════════════════════════════════
+function logMood(emoji,label){
+  const note=document.getElementById('moodNote').value.trim();
+  moods.unshift({emoji,label,note,time:new Date().toTimeString().slice(0,5),date:new Date().toLocaleDateString()});
+  if(moods.length>30)moods.pop();
+  localStorage.setItem('tryit_moods',JSON.stringify(moods));
+  document.getElementById('moodNote').value='';
+  document.querySelectorAll('.mood-btn').forEach(b=>b.classList.remove('selected'));
+  event.currentTarget.classList.add('selected');
+  renderMoods();updateStatus();
+  const responses={radiant:["you're GLOWING!! ✨♡"],blooming:["blooming energy ✿♡"],happy:["love to see it!! ♡"],calm:["serene mode ✦"],meh:["meh days are valid ♡"],sleepy:["maybe a quick nap? ♡"],stressed:["deep breath... one thing at a time ♡"],sad:["sending you the biggest hug ♡"]};
+  const arr=responses[label]||["logged ♡"];
+  showMascot(arr[0],5000);
+}
+function renderMoods(){
+  const el=document.getElementById('moodLog');
+  if(!moods.length){el.innerHTML='<div class="empty-state" style="padding:16px 0;font-size:0.65rem;">no moods logged yet ♡</div>';return;}
+  el.innerHTML=moods.slice(0,10).map(m=>`<div class="mood-entry"><span class="me-emoji">${m.emoji}</span><div><div style="font-size:0.6rem;color:var(--pink);letter-spacing:1px;">${m.label}</div>${m.note?`<div class="me-note">${esc(m.note)}</div>`:''}</div><span class="me-time">${m.date} ${m.time}</span></div>`).join('');
+}
+
+// ══════════════════════════════════
+// STATUS
+// ══════════════════════════════════
+function updateStatus(){
+  document.getElementById('sbNotes').textContent='notes: '+notes.length;
+  document.getElementById('sbCards').textContent='cards: '+cards.length;
+  const done=todos.filter(t=>t.done).length;
+  document.getElementById('sbTasks').textContent=`tasks: ${done}/${todos.length}`;
+  document.getElementById('sbDist').textContent='dist: '+totalDist+'m';
+  document.getElementById('sessCountDisp').textContent=sessions.length;
+}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+// ══════════════════════════════════
+// INIT
+// ══════════════════════════════════
+renderNotes();renderCard();renderTodos();renderSessions();renderMoods();updateStatus();updateRankDisplay();
+document.getElementById('ringFill').style.strokeDasharray=String(2*Math.PI*90);
+document.getElementById('ringFill').style.strokeDashoffset='0';
+</script>
+</body>
+</html>

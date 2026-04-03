@@ -1,0 +1,1167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>tryit — interactive terminal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:       #0a0c0f;
+    --surface:  #111418;
+    --panel:    #161b22;
+    --border:   rgba(255,255,255,0.07);
+    --border2:  rgba(255,255,255,0.12);
+    --green:    #39d98a;
+    --green-dim:#1e7a4d;
+    --blue:     #58b4ff;
+    --yellow:   #f0b429;
+    --red:      #fc5c5c;
+    --purple:   #c084fc;
+    --cyan:     #22d3ee;
+    --text:     #e2e8f0;
+    --muted:    #64748b;
+    --muted2:   #94a3b8;
+    --font-mono: 'JetBrains Mono', monospace;
+    --font-display: 'Syne', sans-serif;
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-mono);
+    overflow: hidden;
+  }
+
+  /* ── layout ── */
+  .app {
+    display: grid;
+    grid-template-rows: auto 1fr;
+    height: 100vh;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 20px 24px 16px;
+    gap: 16px;
+  }
+
+  /* ── header ── */
+  header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .logo {
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .logo-bracket { color: var(--green); }
+  .logo-cursor {
+    display: inline-block;
+    width: 3px; height: 20px;
+    background: var(--green);
+    animation: blink 1.1s step-end infinite;
+    vertical-align: middle;
+    margin-left: 1px;
+    border-radius: 1px;
+  }
+  .tagline {
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .header-right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .pill {
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    border: 1px solid var(--border2);
+    color: var(--muted2);
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+  }
+  .pill.green { border-color: var(--green-dim); color: var(--green); }
+
+  /* ── main terminal shell ── */
+  .shell {
+    display: grid;
+    grid-template-rows: auto 1fr auto auto;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+    min-height: 0;
+    position: relative;
+  }
+  /* subtle scanline overlay */
+  .shell::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      to bottom,
+      transparent 0px,
+      transparent 3px,
+      rgba(0,0,0,0.04) 3px,
+      rgba(0,0,0,0.04) 4px
+    );
+    pointer-events: none;
+    z-index: 10;
+    border-radius: inherit;
+  }
+
+  /* ── title bar ── */
+  .titlebar {
+    display: flex;
+    align-items: center;
+    padding: 10px 14px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    gap: 10px;
+    flex-shrink: 0;
+    user-select: none;
+  }
+  .dots { display: flex; gap: 6px; }
+  .dot {
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    cursor: default;
+    transition: filter 0.15s;
+  }
+  .dot:hover { filter: brightness(1.2); }
+  .dot.r { background: #ff5f57; }
+  .dot.y { background: #febc2e; }
+  .dot.g { background: #28c840; }
+
+  .tabs {
+    display: flex;
+    gap: 2px;
+    margin-left: 6px;
+    overflow-x: auto;
+    flex: 1;
+    scrollbar-width: none;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    color: var(--muted);
+    cursor: pointer;
+    transition: background 0.12s, color 0.12s;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .tab.active { background: rgba(255,255,255,0.07); color: var(--text); }
+  .tab:not(.active):hover { background: rgba(255,255,255,0.04); color: var(--muted2); }
+  .tab-x {
+    font-size: 13px;
+    opacity: 0;
+    transition: opacity 0.12s;
+    line-height: 1;
+    padding: 1px 2px;
+    border-radius: 3px;
+  }
+  .tab:hover .tab-x { opacity: 0.5; }
+  .tab-x:hover { opacity: 1 !important; background: rgba(255,255,255,0.1); }
+  .tab-add {
+    width: 26px; height: 26px;
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    color: var(--muted);
+    cursor: pointer;
+    transition: background 0.12s, color 0.12s;
+    flex-shrink: 0;
+    line-height: 1;
+  }
+  .tab-add:hover { background: rgba(255,255,255,0.06); color: var(--text); }
+
+  .tb-actions {
+    display: flex;
+    gap: 2px;
+    margin-left: auto;
+  }
+  .tb-btn {
+    width: 28px; height: 28px;
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+    color: var(--muted);
+    cursor: pointer;
+    transition: background 0.12s, color 0.12s;
+    position: relative;
+  }
+  .tb-btn:hover { background: rgba(255,255,255,0.06); color: var(--text); }
+  .tb-btn.on { color: var(--blue); }
+
+  /* tooltip */
+  .tb-btn[data-tip]:hover::after {
+    content: attr(data-tip);
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    background: #1e2530;
+    border: 1px solid var(--border2);
+    color: var(--text);
+    font-size: 11px;
+    padding: 4px 8px;
+    border-radius: 5px;
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 100;
+  }
+
+  /* ── output ── */
+  .output {
+    overflow-y: auto;
+    padding: 14px 18px 6px;
+    font-size: 13px;
+    line-height: 1.65;
+    min-height: 0;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.1) transparent;
+  }
+  .output::-webkit-scrollbar { width: 5px; }
+  .output::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+
+  .line { display: flex; align-items: flex-start; min-height: 1.65em; }
+  .line.cmd-line { margin-top: 6px; }
+  .ps1 { color: var(--green); white-space: pre; flex-shrink: 0; }
+  .ps1-path { color: var(--blue); }
+  .ps1-branch { color: var(--purple); }
+  .cmd-val { color: var(--cyan); }
+
+  .out { white-space: pre-wrap; word-break: break-word; width: 100%; }
+  .out.t  { color: var(--text); }
+  .out.m  { color: var(--muted2); }
+  .out.d  { color: var(--muted); }
+  .out.s  { color: var(--green); }
+  .out.w  { color: var(--yellow); }
+  .out.e  { color: var(--red); }
+  .out.i  { color: var(--blue); }
+  .out.p  { color: var(--purple); }
+  .out.c  { color: var(--cyan); }
+  .out.blank { display: block; height: 0.5em; }
+
+  /* typing animation for output lines */
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(2px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .line.new { animation: fadeIn 0.12s ease forwards; }
+
+  /* ── suggestions ── */
+  .suggestions {
+    display: flex;
+    gap: 6px;
+    padding: 8px 16px;
+    border-top: 1px solid var(--border);
+    flex-wrap: wrap;
+    background: rgba(0,0,0,0.15);
+    flex-shrink: 0;
+  }
+  .sug {
+    font-size: 11.5px;
+    padding: 3px 10px;
+    border-radius: 5px;
+    border: 1px solid var(--border2);
+    color: var(--muted2);
+    cursor: pointer;
+    transition: background 0.1s, color 0.1s, border-color 0.1s;
+    font-family: var(--font-mono);
+    white-space: nowrap;
+  }
+  .sug:hover { background: rgba(88,180,255,0.1); color: var(--blue); border-color: rgba(88,180,255,0.3); }
+  .sug.active-sug { background: rgba(57,217,138,0.08); color: var(--green); border-color: var(--green-dim); }
+
+  /* ── input row ── */
+  .input-row {
+    display: flex;
+    align-items: center;
+    padding: 9px 18px 11px;
+    border-top: 1px solid var(--border);
+    gap: 0;
+    flex-shrink: 0;
+    background: rgba(0,0,0,0.2);
+  }
+  .in-ps1 {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    flex-shrink: 0;
+    font-size: 13px;
+    pointer-events: none;
+    white-space: pre;
+  }
+  .cmd-in {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--cyan);
+    font-size: 13px;
+    font-family: var(--font-mono);
+    caret-color: var(--green);
+    min-width: 0;
+  }
+  .cmd-in::placeholder { color: var(--muted); }
+  .run-btn {
+    background: rgba(57,217,138,0.1);
+    border: 1px solid rgba(57,217,138,0.25);
+    color: var(--green);
+    padding: 5px 14px;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    font-family: var(--font-mono);
+    transition: background 0.15s, border-color 0.15s, transform 0.1s;
+    white-space: nowrap;
+    flex-shrink: 0;
+    letter-spacing: 0.03em;
+  }
+  .run-btn:hover { background: rgba(57,217,138,0.18); border-color: rgba(57,217,138,0.45); }
+  .run-btn:active { transform: scale(0.96); }
+
+  /* ── status bar ── */
+  .statusbar {
+    display: flex;
+    align-items: center;
+    padding: 5px 18px;
+    gap: 14px;
+    font-size: 11px;
+    color: var(--muted);
+    background: var(--panel);
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+    user-select: none;
+  }
+  .status-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--green);
+    flex-shrink: 0;
+    transition: background 0.2s;
+  }
+  .status-dot.busy { background: var(--yellow); }
+  .status-dot.err  { background: var(--red); }
+  .status-right { margin-left: auto; display: flex; gap: 14px; align-items: center; }
+  .status-sep { color: var(--border2); }
+
+  /* ── help panel ── */
+  .help-panel {
+    position: absolute;
+    top: 52px; right: 14px;
+    width: 280px;
+    background: #1a2030;
+    border: 1px solid var(--border2);
+    border-radius: 10px;
+    padding: 14px;
+    z-index: 50;
+    font-size: 12px;
+    display: none;
+    box-shadow: 0 16px 48px rgba(0,0,0,0.5);
+  }
+  .help-panel.open { display: block; }
+  .help-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 10px; }
+  .help-row { display: flex; gap: 8px; margin-bottom: 7px; align-items: baseline; }
+  .help-cmd { color: var(--cyan); min-width: 110px; flex-shrink: 0; }
+  .help-desc { color: var(--muted2); }
+
+  /* ── search bar ── */
+  .search-bar {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 18px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(0,0,0,0.15);
+    flex-shrink: 0;
+  }
+  .search-bar.open { display: flex; }
+  .search-in {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text);
+    font-size: 12px;
+    font-family: var(--font-mono);
+  }
+  .search-label { font-size: 11px; color: var(--muted); white-space: nowrap; }
+  .search-count { font-size: 11px; color: var(--green); min-width: 32px; }
+  .search-close { cursor: pointer; color: var(--muted); font-size: 16px; line-height: 1; }
+  .search-close:hover { color: var(--text); }
+  .highlight { background: rgba(240,180,41,0.3); border-radius: 2px; }
+  .highlight.active-hl { background: rgba(57,217,138,0.4); }
+
+  @keyframes blink { 50% { opacity: 0; } }
+
+  /* ── scrollbar gutter ── */
+  .output { scrollbar-gutter: stable; }
+
+  /* ── mobile ── */
+  @media (max-width: 600px) {
+    .app { padding: 10px 10px 8px; gap: 10px; }
+    .output { font-size: 12px; padding: 10px 12px; }
+    .input-row { padding: 7px 12px 9px; }
+    .cmd-in { font-size: 12px; }
+    .run-btn { padding: 4px 10px; font-size: 11px; }
+    .tagline { display: none; }
+    .help-panel { right: 8px; width: 260px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header>
+    <div class="logo">
+      <span class="logo-bracket">[</span>tryit<span class="logo-bracket">]</span>
+      <span class="logo-cursor"></span>
+    </div>
+    <span class="tagline">interactive terminal</span>
+    <div class="header-right">
+      <span class="pill green" id="connPill">● connected</span>
+      <span class="pill" id="histPill">0 cmds</span>
+    </div>
+  </header>
+
+  <div class="shell" id="shell">
+
+    <!-- title bar -->
+    <div class="titlebar">
+      <div class="dots">
+        <div class="dot r" title="close"></div>
+        <div class="dot y" title="minimise"></div>
+        <div class="dot g" title="maximise"></div>
+      </div>
+      <div class="tabs" id="tabsEl"></div>
+      <div class="tab-add" id="newTab" title="New tab">+</div>
+      <div class="tb-actions">
+        <div class="tb-btn" id="searchBtn" data-tip="Find (Ctrl+F)">⌕</div>
+        <div class="tb-btn" id="wrapBtn"   data-tip="Word wrap">↵</div>
+        <div class="tb-btn" id="clearBtn"  data-tip="Clear">⌫</div>
+        <div class="tb-btn" id="helpBtn"   data-tip="Commands">?</div>
+      </div>
+    </div>
+
+    <!-- search bar -->
+    <div class="search-bar" id="searchBar">
+      <span class="search-label">find:</span>
+      <input class="search-in" id="searchIn" placeholder="search output…" autocomplete="off" spellcheck="false" />
+      <span class="search-count" id="searchCount">0</span>
+      <span class="search-close" id="searchClose">×</span>
+    </div>
+
+    <!-- output -->
+    <div class="output" id="output"></div>
+
+    <!-- suggestions -->
+    <div class="suggestions" id="sugBar"></div>
+
+    <!-- input -->
+    <div class="input-row">
+      <span class="in-ps1" id="inPS1"></span>
+      <input class="cmd-in" id="cmdIn" placeholder="type a command… (or try 'help')" autocomplete="off" spellcheck="false" />
+      <button class="run-btn" id="runBtn">▶ run</button>
+    </div>
+
+    <!-- status bar -->
+    <div class="statusbar">
+      <div class="status-dot" id="statusDot"></div>
+      <span id="statusMsg">ready</span>
+      <div class="status-right">
+        <span id="branchSt">⎇ main</span>
+        <span class="status-sep">│</span>
+        <span id="exitSt">exit 0</span>
+        <span class="status-sep">│</span>
+        <span id="clockSt"></span>
+      </div>
+    </div>
+
+    <!-- help panel -->
+    <div class="help-panel" id="helpPanel">
+      <div class="help-title">available commands</div>
+      <div id="helpRows"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────
+//  STATE
+// ─────────────────────────────────────────────
+let tabs = [{ id: 1, name: 'bash', lines: [] }];
+let activeTab = 0;
+let cmdHistory = [];
+let histIdx = -1;
+let wordWrap = true;
+let helpOpen = false;
+let searchOpen = false;
+let lastExit = 0;
+let tabCounter = 1;
+
+// ─────────────────────────────────────────────
+//  DOM refs
+// ─────────────────────────────────────────────
+const output    = document.getElementById('output');
+const cmdIn     = document.getElementById('cmdIn');
+const runBtn    = document.getElementById('runBtn');
+const tabsEl    = document.getElementById('tabsEl');
+const newTab    = document.getElementById('newTab');
+const clearBtn  = document.getElementById('clearBtn');
+const wrapBtn   = document.getElementById('wrapBtn');
+const helpBtn   = document.getElementById('helpBtn');
+const helpPanel = document.getElementById('helpPanel');
+const helpRows  = document.getElementById('helpRows');
+const statusDot = document.getElementById('statusDot');
+const statusMsg = document.getElementById('statusMsg');
+const branchSt  = document.getElementById('branchSt');
+const exitSt    = document.getElementById('exitSt');
+const clockSt   = document.getElementById('clockSt');
+const histPill  = document.getElementById('histPill');
+const sugBar    = document.getElementById('sugBar');
+const inPS1     = document.getElementById('inPS1');
+const searchBtn = document.getElementById('searchBtn');
+const searchBar = document.getElementById('searchBar');
+const searchIn  = document.getElementById('searchIn');
+const searchCount = document.getElementById('searchCount');
+const searchClose = document.getElementById('searchClose');
+
+// ─────────────────────────────────────────────
+//  COMMAND DEFINITIONS
+// ─────────────────────────────────────────────
+const FS = {
+  '/': { type: 'dir', children: ['home', 'etc', 'usr'] },
+  '/home': { type: 'dir', children: ['user'] },
+  '/home/user': { type: 'dir', children: ['projects', 'notes.md', '.bashrc'] },
+  '/home/user/projects': { type: 'dir', children: ['tryit', 'demo-app'] },
+  '/home/user/projects/tryit': { type: 'dir', children: ['index.html', 'README.md', 'package.json'] },
+};
+let cwd = '/home/user/projects/tryit';
+
+const BRANCH = 'main';
+
+function ps1Parts() {
+  const short = cwd.replace('/home/user', '~');
+  return { path: short, branch: BRANCH };
+}
+
+function renderPS1(el) {
+  const p = ps1Parts();
+  el.innerHTML =
+    `<span style="color:var(--green)">user</span>` +
+    `<span style="color:var(--muted)">@</span>` +
+    `<span style="color:var(--blue)">tryit</span> ` +
+    `<span style="color:var(--cyan)">${p.path}</span> ` +
+    `<span style="color:var(--purple)">(${p.branch})</span>` +
+    `<span style="color:var(--green)"> $ </span>`;
+}
+
+const CMDS = {
+  help: {
+    desc: 'list commands',
+    run() {
+      return [
+        {c:'i', v:'╭─ tryit — available commands ────────────────╮'},
+        ...Object.entries(CMDS).map(([k,v]) => ({c:'t', v:`  ${k.padEnd(18,' ')}${v.desc}`})),
+        {c:'i', v:'╰─────────────────────────────────────────────╯'},
+      ];
+    }
+  },
+  ls: {
+    desc: 'list directory contents',
+    run(args) {
+      const long = args.includes('-la') || args.includes('-l') || args.includes('-a');
+      const node = FS[cwd];
+      if (!node) return [{c:'e', v:`ls: cannot access '${cwd}': No such file or directory`}];
+      const items = node.children || [];
+      if (!long) return [{c:'t', v:items.join('  ')}];
+      const now = new Date();
+      const mon = now.toLocaleString('en',{month:'short'});
+      const day = String(now.getDate()).padStart(2,' ');
+      return [
+        {c:'d', v:`total ${items.length * 4}`},
+        ...items.map(i => {
+          const isDir = FS[cwd + '/' + i]?.type === 'dir';
+          return {c: isDir ? 'p' : 't', v:`${isDir?'drwxr-xr-x':'-rw-r--r--'}  1 user staff   ${String(Math.floor(Math.random()*4000+200)).padStart(5)} ${mon} ${day} ${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')} ${i}`};
+        }),
+      ];
+    }
+  },
+  pwd: { desc: 'print working directory', run() { return [{c:'t', v:cwd}]; } },
+  cd: {
+    desc: 'change directory',
+    run(args) {
+      const target = args[0] || '/home/user';
+      let next = target.startsWith('/') ? target : cwd + '/' + target;
+      // resolve ..
+      next = next.split('/').reduce((a, p) => {
+        if (p === '..') a.pop();
+        else if (p && p !== '.') a.push(p);
+        return a;
+      }, []).join('/') || '/';
+      if (!next.startsWith('/')) next = '/' + next;
+      if (FS[next] && FS[next].type === 'dir') { cwd = next; renderPS1(inPS1); return []; }
+      return [{c:'e', v:`cd: ${target}: No such file or directory`}];
+    }
+  },
+  cat: {
+    desc: 'show file contents',
+    run(args) {
+      if (!args[0]) return [{c:'e', v:'cat: missing operand'}];
+      const f = args[0];
+      const files = {
+        'README.md':    [{c:'i',v:'# tryit'},{c:'',v:''},{c:'t',v:'An interactive browser-based terminal playground.'},{c:'',v:''},{c:'m',v:'## Usage'},{c:'t',v:'Open index.html in any browser. No server needed.'}],
+        'index.html':   [{c:'m',v:'<!DOCTYPE html>'},{c:'t',v:'<html lang="en">...'},{c:'d',v:'<!-- 500+ lines of terminal goodness -->'}],
+        'package.json': [{c:'t',v:'{'},{c:'c',v:'  "name": "tryit",'},{c:'c',v:'  "version": "1.0.0",'},{c:'c',v:'  "description": "browser terminal playground"'},{c:'t',v:'}'}],
+        'notes.md':     [{c:'t',v:'# notes'},{c:'',v:''},{c:'m',v:'- improve autocomplete'},{c:'m',v:'- add themes'},{c:'m',v:'- multi-tab persistence'}],
+        '.bashrc':      [{c:'d',v:'# .bashrc'},{c:'d',v:'export PS1="\\u@\\h:\\w$ "'},{c:'d',v:'alias ll="ls -la"'}],
+      };
+      const name = f.split('/').pop();
+      return files[name] || [{c:'e', v:`cat: ${f}: No such file or directory`}];
+    }
+  },
+  echo: {
+    desc: 'print text to stdout',
+    run(args) { return [{c:'t', v: args.join(' ')}]; }
+  },
+  whoami: { desc: 'current user', run() { return [{c:'t', v:'user'}]; } },
+  date: {
+    desc: 'show current date/time',
+    run() { return [{c:'t', v: new Date().toString()}]; }
+  },
+  uname: {
+    desc: 'system information',
+    run(args) {
+      if (args.includes('-a')) return [{c:'t',v:'Linux tryit 5.15.0-browser x86_64 GNU/Linux'}];
+      return [{c:'t',v:'Linux'}];
+    }
+  },
+  uptime: {
+    desc: 'system uptime',
+    run() {
+      const s = Math.floor(performance.now()/1000);
+      const h = Math.floor(s/3600), m = Math.floor((s%3600)/60);
+      return [{c:'t', v:` ${new Date().toLocaleTimeString()} up ${h}:${String(m).padStart(2,'0')},  1 user,  load average: 0.12, 0.08, 0.04`}];
+    }
+  },
+  history: {
+    desc: 'command history',
+    run() {
+      if (!cmdHistory.length) return [{c:'m', v:'no history yet'}];
+      return cmdHistory.map((h,i) => ({c:'t', v:`  ${String(i+1).padStart(4)}  ${h}`}));
+    }
+  },
+  clear: { desc: 'clear the terminal', run() { return '__CLEAR__'; } },
+  'git status': {
+    desc: 'repo status',
+    run() {
+      return [
+        {c:'i', v:'On branch main'},
+        {c:'t', v:"Your branch is up to date with 'origin/main'."},
+        {c:'', v:''},
+        {c:'w', v:'Changes not staged for commit:'},
+        {c:'d', v:'  (use "git add <file>..." to update what will be committed)'},
+        {c:'e', v:'        modified:   index.html'},
+        {c:'', v:''},
+        {c:'m', v:'no changes added to commit (use "git add" and/or "git commit -a")'},
+      ];
+    }
+  },
+  'git log': {
+    desc: 'commit log',
+    run(args) {
+      const oneline = args.includes('--oneline');
+      const commits = [
+        { hash:'a3f9c12', msg:'feat: add search, tabs, command history', author:'you', date:'Thu Apr  3 09:00:00 2026' },
+        { hash:'b81d2fe', msg:'fix: resolve input focus on mobile',       author:'you', date:'Wed Apr  2 14:22:00 2026' },
+        { hash:'c44a801', msg:'feat: word wrap toggle & status bar',      author:'you', date:'Mon Mar 31 10:10:00 2026' },
+        { hash:'d112ff0', msg:'init: project scaffold',                   author:'you', date:'Sat Mar 29 08:00:00 2026' },
+      ];
+      if (oneline) return commits.map(c => ({c:'p', v:`${c.hash} ${c.msg}`}));
+      return commits.flatMap(c => [
+        {c:'p', v:`commit ${c.hash}`},
+        {c:'t', v:`Author: ${c.author} <${c.author}@example.com>`},
+        {c:'t', v:`Date:   ${c.date}`},
+        {c:'', v:''},
+        {c:'t', v:`    ${c.msg}`},
+        {c:'', v:''},
+      ]);
+    }
+  },
+  'git diff': {
+    desc: 'show changes',
+    run() {
+      return [
+        {c:'i', v:'diff --git a/index.html b/index.html'},
+        {c:'m', v:'index a1b2c3..d4e5f6 100644'},
+        {c:'m', v:'--- a/index.html'},
+        {c:'m', v:'+++ b/index.html'},
+        {c:'m', v:'@@ -120,7 +120,10 @@'},
+        {c:'e', v:'-  // old terminal code'},
+        {c:'s', v:'+  // enhanced terminal with tabs, search, history'},
+        {c:'s', v:'+  // word wrap, suggestions, status bar'},
+        {c:'s', v:'+  // command autocomplete & FS simulation'},
+      ];
+    }
+  },
+  'npm run dev': {
+    desc: 'start dev server',
+    run() {
+      return [
+        {c:'i', v:'> tryit@1.0.0 dev'},
+        {c:'i', v:'> vite --open'},
+        {c:'', v:''},
+        {c:'s', v:'  VITE v5.2.1  ready in 287 ms'},
+        {c:'', v:''},
+        {c:'t', v:'  ➜  Local:   http://localhost:5173/'},
+        {c:'t', v:'  ➜  Network: use --host to expose'},
+        {c:'m', v:'  ➜  press h + enter to show help'},
+      ];
+    }
+  },
+  'npm install': {
+    desc: 'install dependencies',
+    run() {
+      return [
+        {c:'m', v:'npm warn deprecated inflight@1.0.6'},
+        {c:'t', v:''},
+        {c:'s', v:'added 42 packages in 1.8s'},
+        {c:'m', v:'3 packages are looking for funding'},
+      ];
+    }
+  },
+  curl: {
+    desc: 'transfer data from URL',
+    run(args) {
+      const url = args.find(a => !a.startsWith('-')) || '';
+      if (!url) return [{c:'e', v:'curl: no URL specified'}];
+      return [
+        {c:'m', v:`  % Total    % Received % Xferd  Average Speed   Time`},
+        {c:'m', v:`100   248  100   248    0     0   4133      0 --:--:-- --:--:--`},
+        {c:'t', v:`{"status":"ok","url":"${url}","method":"GET"}`},
+      ];
+    }
+  },
+  ping: {
+    desc: 'ping a host',
+    run(args) {
+      const host = args[0] || 'localhost';
+      return [
+        {c:'t', v:`PING ${host}: 56 data bytes`},
+        {c:'s', v:`64 bytes from ${host}: icmp_seq=0 ttl=64 time=0.12 ms`},
+        {c:'s', v:`64 bytes from ${host}: icmp_seq=1 ttl=64 time=0.10 ms`},
+        {c:'s', v:`64 bytes from ${host}: icmp_seq=2 ttl=64 time=0.11 ms`},
+        {c:'', v:''},
+        {c:'t', v:`--- ${host} ping statistics ---`},
+        {c:'t', v:`3 packets transmitted, 3 received, 0% packet loss`},
+      ];
+    }
+  },
+  env: {
+    desc: 'print environment variables',
+    run() {
+      return [
+        {c:'t', v:'HOME=/home/user'},
+        {c:'t', v:'USER=user'},
+        {c:'t', v:'SHELL=/bin/bash'},
+        {c:'t', v:'TERM=xterm-256color'},
+        {c:'t', v:'PATH=/usr/local/bin:/usr/bin:/bin'},
+        {c:'t', v:'EDITOR=vim'},
+        {c:'t', v:'LANG=en_US.UTF-8'},
+      ];
+    }
+  },
+  tree: {
+    desc: 'show directory tree',
+    run() {
+      return [
+        {c:'t', v:'.'},
+        {c:'p', v:'├── index.html'},
+        {c:'p', v:'├── README.md'},
+        {c:'p', v:'└── package.json'},
+        {c:'', v:''},
+        {c:'m', v:'0 directories, 3 files'},
+      ];
+    }
+  },
+  exit: {
+    desc: 'close current tab',
+    run() { closeTab(activeTab); return []; }
+  },
+};
+
+// ─────────────────────────────────────────────
+//  SUGGESTIONS
+// ─────────────────────────────────────────────
+const ALL_SUGGESTIONS = [
+  'help','ls -la','pwd','git status','git log --oneline',
+  'git diff','npm run dev','cat README.md','tree','history',
+  'echo hello world','uname -a','env','clear',
+];
+
+function renderSuggestions(filter = '') {
+  const items = filter
+    ? ALL_SUGGESTIONS.filter(s => s.startsWith(filter) && s !== filter)
+    : ALL_SUGGESTIONS.slice(0, 10);
+  sugBar.innerHTML = '';
+  items.slice(0, 12).forEach(s => {
+    const el = document.createElement('span');
+    el.className = 'sug';
+    el.textContent = s;
+    el.addEventListener('click', () => { cmdIn.value = s; cmdIn.focus(); });
+    sugBar.appendChild(el);
+  });
+}
+renderSuggestions();
+
+// ─────────────────────────────────────────────
+//  HELP PANEL
+// ─────────────────────────────────────────────
+function buildHelp() {
+  helpRows.innerHTML = '';
+  Object.entries(CMDS).forEach(([k, v]) => {
+    const row = document.createElement('div');
+    row.className = 'help-row';
+    row.innerHTML = `<span class="help-cmd">${k}</span><span class="help-desc">${v.desc}</span>`;
+    helpRows.appendChild(row);
+  });
+}
+buildHelp();
+
+// ─────────────────────────────────────────────
+//  TABS
+// ─────────────────────────────────────────────
+function renderTabs() {
+  tabsEl.innerHTML = '';
+  tabs.forEach((t, i) => {
+    const el = document.createElement('div');
+    el.className = 'tab' + (i === activeTab ? ' active' : '');
+    el.innerHTML = `<span>${t.name}</span><span class="tab-x">×</span>`;
+    el.addEventListener('click', e => {
+      if (e.target.classList.contains('tab-x')) { closeTab(i); return; }
+      switchTab(i);
+    });
+    tabsEl.appendChild(el);
+  });
+}
+
+function switchTab(i) {
+  saveTabLines();
+  activeTab = i;
+  renderTabs();
+  loadTabLines();
+  renderPS1(inPS1);
+  cmdIn.focus();
+}
+
+function closeTab(i) {
+  if (tabs.length === 1) { clearOutput(); return; }
+  tabs.splice(i, 1);
+  activeTab = Math.min(activeTab, tabs.length - 1);
+  renderTabs();
+  loadTabLines();
+}
+
+function addTab() {
+  saveTabLines();
+  tabCounter++;
+  tabs.push({ id: tabCounter, name: `bash ${tabCounter}`, lines: [] });
+  activeTab = tabs.length - 1;
+  renderTabs();
+  loadTabLines();
+  appendLine('d', `new session — bash ${tabCounter}`);
+  cmdIn.focus();
+}
+
+function saveTabLines() {
+  tabs[activeTab].lines = Array.from(output.children).map(el => el.outerHTML);
+}
+function loadTabLines() {
+  output.innerHTML = tabs[activeTab].lines.join('');
+  output.scrollTop = output.scrollHeight;
+}
+
+// ─────────────────────────────────────────────
+//  OUTPUT HELPERS
+// ─────────────────────────────────────────────
+function appendLine(cls, text, animate = true) {
+  const div = document.createElement('div');
+  div.className = 'line' + (animate ? ' new' : '');
+  if (cls === '') {
+    div.innerHTML = '<span class="out blank"></span>';
+  } else {
+    const span = document.createElement('span');
+    span.className = 'out ' + cls;
+    span.style.whiteSpace = wordWrap ? 'pre-wrap' : 'pre';
+    span.textContent = text;
+    div.appendChild(span);
+  }
+  output.appendChild(div);
+  output.scrollTop = output.scrollHeight;
+}
+
+function appendCmdLine(rawCmd) {
+  const div = document.createElement('div');
+  div.className = 'line cmd-line new';
+  div.innerHTML = `<span class="ps1">${inPS1.innerHTML}</span><span class="cmd-val">${escHtml(rawCmd)}</span>`;
+  output.appendChild(div);
+  output.scrollTop = output.scrollHeight;
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function clearOutput() {
+  output.innerHTML = '';
+  tabs[activeTab].lines = [];
+}
+
+// ─────────────────────────────────────────────
+//  COMMAND RUNNER
+// ─────────────────────────────────────────────
+function runCmd(raw) {
+  raw = raw.trim();
+  if (!raw) return;
+  cmdHistory.unshift(raw);
+  histIdx = -1;
+  histPill.textContent = `${cmdHistory.length} cmd${cmdHistory.length !== 1 ? 's' : ''}`;
+
+  appendCmdLine(raw);
+  setStatus('running', 'busy');
+
+  setTimeout(() => {
+    const [cmd, ...args] = raw.split(/\s+/);
+    const full = raw.toLowerCase();
+
+    let result;
+    if (CMDS[full]) result = CMDS[full].run(args);
+    else if (CMDS[cmd.toLowerCase()]) result = CMDS[cmd.toLowerCase()].run(args);
+    else {
+      result = [
+        {c:'e', v:`${cmd}: command not found`},
+        {c:'d', v:`type 'help' for available commands`},
+      ];
+      lastExit = 127;
+      exitSt.textContent = 'exit 127';
+      setStatus('error', 'err');
+      goto_end(result);
+      return;
+    }
+
+    if (result === '__CLEAR__') { clearOutput(); setStatus('ready', 'ok'); return; }
+
+    lastExit = 0;
+    exitSt.textContent = 'exit 0';
+    goto_end(result);
+  }, 80);
+}
+
+function goto_end(result) {
+  if (Array.isArray(result)) {
+    result.forEach(r => appendLine(r.c || 't', r.v ?? ''));
+  }
+  setStatus('ready', 'ok');
+  saveTabLines();
+}
+
+function setStatus(msg, state) {
+  statusMsg.textContent = msg;
+  statusDot.className = 'status-dot' + (state === 'busy' ? ' busy' : state === 'err' ? ' err' : '');
+}
+
+// ─────────────────────────────────────────────
+//  SEARCH
+// ─────────────────────────────────────────────
+let hlIndex = 0;
+function doSearch(q) {
+  clearSearch();
+  if (!q) { searchCount.textContent = '0'; return; }
+  const spans = output.querySelectorAll('.out');
+  let count = 0, firstEl = null;
+  spans.forEach(span => {
+    const text = span.textContent;
+    const re = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'), 'gi');
+    if (re.test(text)) {
+      span.innerHTML = span.textContent.replace(re, m => {
+        count++;
+        return `<mark class="highlight">${escHtml(m)}</mark>`;
+      });
+      if (!firstEl) firstEl = span.querySelector('mark');
+    }
+  });
+  searchCount.textContent = String(count);
+  if (firstEl) {
+    firstEl.classList.add('active-hl');
+    firstEl.scrollIntoView({ block: 'center' });
+  }
+}
+function clearSearch() {
+  output.querySelectorAll('mark.highlight').forEach(m => {
+    m.replaceWith(document.createTextNode(m.textContent));
+  });
+  output.querySelectorAll('.out').forEach(s => {
+    const t = s.textContent;
+    s.textContent = t; // normalise
+  });
+}
+
+// ─────────────────────────────────────────────
+//  CLOCK
+// ─────────────────────────────────────────────
+function tick() {
+  clockSt.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+tick();
+setInterval(tick, 1000);
+
+// ─────────────────────────────────────────────
+//  EVENTS
+// ─────────────────────────────────────────────
+runBtn.addEventListener('click', () => {
+  const v = cmdIn.value; cmdIn.value = ''; renderSuggestions(); runCmd(v); cmdIn.focus();
+});
+
+cmdIn.addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    const v = cmdIn.value; cmdIn.value = ''; renderSuggestions(); runCmd(v);
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    if (histIdx < cmdHistory.length - 1) { histIdx++; cmdIn.value = cmdHistory[histIdx]; }
+  } else if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    if (histIdx > 0) { histIdx--; cmdIn.value = cmdHistory[histIdx]; }
+    else { histIdx = -1; cmdIn.value = ''; }
+  } else if (e.key === 'Tab') {
+    e.preventDefault();
+    const v = cmdIn.value.toLowerCase();
+    const matches = ALL_SUGGESTIONS.filter(s => s.startsWith(v) && s !== v);
+    if (matches.length === 1) cmdIn.value = matches[0];
+    else if (matches.length > 1) {
+      appendCmdLine(cmdIn.value);
+      appendLine('d', matches.join('   '));
+      saveTabLines();
+    }
+  }
+});
+
+cmdIn.addEventListener('input', () => {
+  renderSuggestions(cmdIn.value.toLowerCase());
+});
+
+clearBtn.addEventListener('click', () => { clearOutput(); cmdIn.focus(); });
+
+wrapBtn.addEventListener('click', () => {
+  wordWrap = !wordWrap;
+  wrapBtn.classList.toggle('on', wordWrap);
+  output.querySelectorAll('.out').forEach(el => {
+    el.style.whiteSpace = wordWrap ? 'pre-wrap' : 'pre';
+  });
+});
+wrapBtn.classList.add('on');
+
+helpBtn.addEventListener('click', () => {
+  helpOpen = !helpOpen;
+  helpPanel.classList.toggle('open', helpOpen);
+  helpBtn.classList.toggle('on', helpOpen);
+});
+
+document.addEventListener('click', e => {
+  if (helpOpen && !helpPanel.contains(e.target) && e.target !== helpBtn) {
+    helpOpen = false;
+    helpPanel.classList.remove('open');
+    helpBtn.classList.remove('on');
+  }
+});
+
+newTab.addEventListener('click', addTab);
+
+searchBtn.addEventListener('click', openSearch);
+searchClose.addEventListener('click', closeSearch);
+searchIn.addEventListener('input', () => doSearch(searchIn.value));
+searchIn.addEventListener('keydown', e => { if (e.key === 'Escape') closeSearch(); });
+
+function openSearch() {
+  searchOpen = true;
+  searchBar.classList.add('open');
+  searchBtn.classList.add('on');
+  searchIn.focus();
+}
+function closeSearch() {
+  searchOpen = false;
+  searchBar.classList.remove('open');
+  searchBtn.classList.remove('on');
+  clearSearch();
+  searchCount.textContent = '0';
+}
+
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'f') { e.preventDefault(); openSearch(); }
+  if ((e.ctrlKey || e.metaKey) && e.key === 'l') { e.preventDefault(); clearOutput(); }
+  if ((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); clearOutput(); }
+});
+
+// focus input on any keypress in the terminal area
+document.getElementById('shell').addEventListener('click', e => {
+  if (!e.target.closest('.titlebar') && !e.target.closest('.help-panel') &&
+      !e.target.closest('.search-bar') && !e.target.closest('.suggestions')) {
+    cmdIn.focus();
+  }
+});
+
+// ─────────────────────────────────────────────
+//  BOOT
+// ─────────────────────────────────────────────
+renderTabs();
+renderPS1(inPS1);
+setStatus('ready', 'ok');
+
+const BOOT = [
+  {c:'s', v:'██████╗ ██████╗ ██╗   ██╗██╗████████╗'},
+  {c:'s', v:'╚══██╔╝██╔══██╗╚██╗ ██╔╝██║╚══██╔══╝'},
+  {c:'s', v:'   ██║ ██████╔╝ ╚████╔╝ ██║   ██║   '},
+  {c:'s', v:'   ██║ ██╔══██╗  ╚██╔╝  ██║   ██║   '},
+  {c:'s', v:'   ██║ ██║  ██║   ██║   ██║   ██║   '},
+  {c:'s', v:'   ╚═╝ ╚═╝  ╚═╝   ╚═╝   ╚═╝   ╚═╝   '},
+  {c:'', v:''},
+  {c:'i', v:'  interactive terminal playground  v1.0.0'},
+  {c:'', v:''},
+  {c:'d', v:'  ↑↓ history   Tab autocomplete   Ctrl+F search'},
+  {c:'d', v:'  Ctrl+L clear   + new tab   ? commands'},
+  {c:'', v:''},
+  {c:'m', v:"  type 'help' to list all commands."},
+  {c:'', v:''},
+];
+
+BOOT.forEach((l, i) => {
+  setTimeout(() => {
+    appendLine(l.c, l.v, false);
+    if (i === BOOT.length - 1) saveTabLines();
+  }, i * 28);
+});
+</script>
+</body>
+</html>

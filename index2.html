@@ -1,1167 +1,1104 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>tryit — interactive terminal</title>
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>tryit — study quest</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet"/>
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --pink:#ff6eb4;--pink2:#ff9dd6;--pinkd:#c2185b;
+  --yellow:#ffd600;--orange:#ff9800;--red:#f44336;
+  --purple:#c084fc;--blue:#60a5fa;--teal:#22d3ee;
+  --green:#4ade80;--greend:#166534;
+  --white:#fff;--dark:#0d0d1a;--darker:#07070f;
+  --panel:#13132a;--panel2:#1a1a35;--panel3:#0f0f24;
+  --border:rgba(255,255,255,0.08);--border2:rgba(255,255,255,0.14);
+  --font-game:'Press Start 2P',monospace;
+  --font-mono:'JetBrains Mono',monospace;
+  --text:#e2e8f0;--muted:#94a3b8;--dim:#475569;
+}
+html,body{height:100%;background:var(--darker);overflow:hidden;font-family:var(--font-mono);color:var(--text)}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-thumb{background:rgba(255,110,180,0.3);border-radius:3px}
+::-webkit-scrollbar-track{background:transparent}
 
-  :root {
-    --bg:       #0a0c0f;
-    --surface:  #111418;
-    --panel:    #161b22;
-    --border:   rgba(255,255,255,0.07);
-    --border2:  rgba(255,255,255,0.12);
-    --green:    #39d98a;
-    --green-dim:#1e7a4d;
-    --blue:     #58b4ff;
-    --yellow:   #f0b429;
-    --red:      #fc5c5c;
-    --purple:   #c084fc;
-    --cyan:     #22d3ee;
-    --text:     #e2e8f0;
-    --muted:    #64748b;
-    --muted2:   #94a3b8;
-    --font-mono: 'JetBrains Mono', monospace;
-    --font-display: 'Syne', sans-serif;
-  }
+/* ── APP LAYOUT ── */
+.app{display:grid;grid-template-rows:auto auto 1fr;height:100vh;overflow:hidden}
 
-  html, body {
-    height: 100%;
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--font-mono);
-    overflow: hidden;
-  }
+/* ── HUD ── */
+.hud{
+  background:var(--panel);border-bottom:2px solid rgba(255,110,180,0.4);
+  padding:7px 14px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+  flex-shrink:0;z-index:20;position:relative;
+}
+.hud-logo{font-family:var(--font-game);font-size:9px;color:var(--pink);letter-spacing:1px;white-space:nowrap;flex-shrink:0}
+.hud-logo b{color:var(--yellow)}
+.hud-sep{color:var(--border2);font-size:16px;flex-shrink:0}
+.hud-stat{display:flex;align-items:center;gap:5px;flex-shrink:0}
+.hud-lbl{font-family:var(--font-game);font-size:6px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em}
+.hud-v{font-family:var(--font-game);font-size:8px;color:var(--yellow)}
+.hud-v.pink{color:var(--pink)}
+.hud-v.green{color:var(--green)}
+.hud-v.white{color:#fff}
+.xp-wrap{display:flex;align-items:center;gap:6px}
+.xp-bar{width:72px;height:7px;background:rgba(255,255,255,0.08);border-radius:4px;overflow:hidden;border:1px solid rgba(255,255,255,0.12)}
+.xp-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--pink),var(--yellow));transition:width .4s ease;width:0%}
+.hearts{display:flex;gap:3px;align-items:center}
+.heart{font-size:13px;transition:opacity .2s;filter:drop-shadow(0 0 3px var(--pink))}
+.heart.empty{opacity:.2;filter:none}
+.coin-row{display:flex;align-items:center;gap:4px}
+.coin{width:11px;height:11px;border-radius:50%;background:var(--yellow);border:2px solid #b45309;flex-shrink:0;animation:spin 2s linear infinite}
+@keyframes spin{0%,100%{transform:scaleX(1)}50%{transform:scaleX(.15)}}
+.flame{font-size:13px;animation:pulse .8s ease-in-out infinite alternate}
+@keyframes pulse{from{transform:scale(1)}to{transform:scale(1.2)}}
+.hud-right{margin-left:auto;display:flex;gap:6px;flex-shrink:0}
+.hbtn{
+  font-family:var(--font-game);font-size:6px;padding:5px 8px;border-radius:4px;cursor:pointer;
+  background:rgba(255,255,255,0.05);border:1px solid var(--border2);color:var(--muted);
+  transition:all .12s;white-space:nowrap;
+}
+.hbtn:hover{background:rgba(255,110,180,.18);border-color:var(--pink);color:var(--pink)}
+.hbtn.on{background:rgba(255,110,180,.15);border-color:var(--pink);color:var(--pink)}
 
-  /* ── layout ── */
-  .app {
-    display: grid;
-    grid-template-rows: auto 1fr;
-    height: 100vh;
-    max-width: 1100px;
-    margin: 0 auto;
-    padding: 20px 24px 16px;
-    gap: 16px;
-  }
+/* ── WORLD STRIP ── */
+.world-strip{
+  background:var(--panel3);border-bottom:1px solid var(--border);
+  padding:6px 14px;display:flex;align-items:center;overflow-x:auto;
+  scrollbar-width:none;flex-shrink:0;
+}
+.world-strip::-webkit-scrollbar{display:none}
+.wpath{display:flex;align-items:center}
+.wnode{
+  display:flex;flex-direction:column;align-items:center;gap:2px;
+  cursor:pointer;padding:0 8px;transition:transform .15s;flex-shrink:0;
+}
+.wnode:hover:not(.locked){transform:translateY(-2px)}
+.wnode.locked{cursor:not-allowed;opacity:.35}
+.wnode-icon{font-size:18px;line-height:1;transition:filter .2s}
+.wnode.active .wnode-icon{animation:nbounce .6s ease-in-out infinite alternate;filter:drop-shadow(0 0 6px var(--yellow))}
+@keyframes nbounce{from{transform:translateY(0)}to{transform:translateY(-4px)}}
+.wnode-label{font-family:var(--font-game);font-size:5.5px;color:var(--dim);text-align:center;line-height:1.4;max-width:56px}
+.wnode.done .wnode-label{color:var(--green)}
+.wnode.active .wnode-label{color:var(--yellow)}
+.wnode-stars{font-size:7px;color:var(--yellow);min-height:8px}
+.wline{width:20px;height:2px;background:rgba(255,255,255,.1);border-radius:1px;margin-bottom:14px;flex-shrink:0}
+.wline.done{background:var(--green)}
 
-  /* ── header ── */
-  header {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    flex-wrap: wrap;
-  }
-  .logo {
-    font-family: var(--font-display);
-    font-size: 22px;
-    font-weight: 800;
-    letter-spacing: -0.5px;
-    color: var(--text);
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .logo-bracket { color: var(--green); }
-  .logo-cursor {
-    display: inline-block;
-    width: 3px; height: 20px;
-    background: var(--green);
-    animation: blink 1.1s step-end infinite;
-    vertical-align: middle;
-    margin-left: 1px;
-    border-radius: 1px;
-  }
-  .tagline {
-    font-size: 11px;
-    color: var(--muted);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-  .header-right {
-    margin-left: auto;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .pill {
-    font-size: 11px;
-    padding: 3px 10px;
-    border-radius: 20px;
-    border: 1px solid var(--border2);
-    color: var(--muted2);
-    letter-spacing: 0.04em;
-    white-space: nowrap;
-  }
-  .pill.green { border-color: var(--green-dim); color: var(--green); }
+/* ── MAIN GRID ── */
+.main{display:grid;grid-template-columns:1fr 230px;min-height:0;overflow:hidden}
 
-  /* ── main terminal shell ── */
-  .shell {
-    display: grid;
-    grid-template-rows: auto 1fr auto auto;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    overflow: hidden;
-    min-height: 0;
-    position: relative;
-  }
-  /* subtle scanline overlay */
-  .shell::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: repeating-linear-gradient(
-      to bottom,
-      transparent 0px,
-      transparent 3px,
-      rgba(0,0,0,0.04) 3px,
-      rgba(0,0,0,0.04) 4px
-    );
-    pointer-events: none;
-    z-index: 10;
-    border-radius: inherit;
-  }
+/* ── TERMINAL ── */
+.tpanel{display:grid;grid-template-rows:auto auto 1fr auto auto;min-height:0;border-right:1px solid var(--border)}
 
-  /* ── title bar ── */
-  .titlebar {
-    display: flex;
-    align-items: center;
-    padding: 10px 14px;
-    background: var(--panel);
-    border-bottom: 1px solid var(--border);
-    gap: 10px;
-    flex-shrink: 0;
-    user-select: none;
-  }
-  .dots { display: flex; gap: 6px; }
-  .dot {
-    width: 12px; height: 12px;
-    border-radius: 50%;
-    cursor: default;
-    transition: filter 0.15s;
-  }
-  .dot:hover { filter: brightness(1.2); }
-  .dot.r { background: #ff5f57; }
-  .dot.y { background: #febc2e; }
-  .dot.g { background: #28c840; }
+/* titlebar */
+.tbar{
+  display:flex;align-items:center;gap:8px;padding:7px 12px;
+  background:var(--panel2);border-bottom:1px solid var(--border);flex-shrink:0;
+}
+.tdots{display:flex;gap:5px}
+.tdot{width:10px;height:10px;border-radius:50%}
+.tdot.r{background:#ff5f57}.tdot.y{background:#febc2e}.tdot.g{background:#28c840}
+.ttabs{display:flex;gap:2px;flex:1;overflow-x:auto;scrollbar-width:none}
+.ttabs::-webkit-scrollbar{display:none}
+.ttab{font-family:var(--font-game);font-size:6px;padding:4px 10px;border-radius:4px;cursor:pointer;color:var(--dim);white-space:nowrap;transition:all .1s}
+.ttab.active{background:rgba(255,110,180,.14);color:var(--pink)}
+.ttab:not(.active):hover{background:rgba(255,255,255,.04);color:var(--muted)}
+.taddtab{font-size:15px;color:var(--dim);cursor:pointer;padding:2px 4px;border-radius:4px;transition:all .1s;line-height:1;flex-shrink:0}
+.taddtab:hover{color:var(--text);background:rgba(255,255,255,.06)}
+.tbtns{display:flex;gap:2px;margin-left:auto}
+.tbtn{width:26px;height:26px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--dim);cursor:pointer;transition:all .1s}
+.tbtn:hover{background:rgba(255,255,255,.06);color:var(--text)}
+.tbtn.on{color:var(--pink)}
 
-  .tabs {
-    display: flex;
-    gap: 2px;
-    margin-left: 6px;
-    overflow-x: auto;
-    flex: 1;
-    scrollbar-width: none;
-  }
-  .tabs::-webkit-scrollbar { display: none; }
-  .tab {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 4px 12px;
-    border-radius: 6px;
-    font-size: 12px;
-    color: var(--muted);
-    cursor: pointer;
-    transition: background 0.12s, color 0.12s;
-    white-space: nowrap;
-    flex-shrink: 0;
-  }
-  .tab.active { background: rgba(255,255,255,0.07); color: var(--text); }
-  .tab:not(.active):hover { background: rgba(255,255,255,0.04); color: var(--muted2); }
-  .tab-x {
-    font-size: 13px;
-    opacity: 0;
-    transition: opacity 0.12s;
-    line-height: 1;
-    padding: 1px 2px;
-    border-radius: 3px;
-  }
-  .tab:hover .tab-x { opacity: 0.5; }
-  .tab-x:hover { opacity: 1 !important; background: rgba(255,255,255,0.1); }
-  .tab-add {
-    width: 26px; height: 26px;
-    border-radius: 6px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 16px;
-    color: var(--muted);
-    cursor: pointer;
-    transition: background 0.12s, color 0.12s;
-    flex-shrink: 0;
-    line-height: 1;
-  }
-  .tab-add:hover { background: rgba(255,255,255,0.06); color: var(--text); }
+/* story box */
+.story{
+  background:var(--panel2);border-bottom:1px solid var(--border);
+  padding:9px 13px;display:flex;gap:10px;align-items:flex-start;flex-shrink:0;
+}
+.kirby{font-size:26px;flex-shrink:0;animation:sway 1.2s ease-in-out infinite alternate;filter:drop-shadow(0 0 5px var(--pink));line-height:1;cursor:pointer}
+@keyframes sway{from{transform:rotate(-5deg) scale(1)}to{transform:rotate(5deg) scale(1.06)}}
+.story-wrap{flex:1;min-width:0}
+.story-who{font-family:var(--font-game);font-size:6.5px;color:var(--pink);margin-bottom:3px}
+.story-msg{font-family:var(--font-game);font-size:6.5px;line-height:1.9;color:rgba(255,255,255,.9);min-height:24px}
+.story-msg .cur{display:inline-block;width:6px;height:9px;background:var(--pink);vertical-align:text-bottom;animation:blink .7s step-end infinite;margin-left:1px}
+@keyframes blink{50%{opacity:0}}
+.story-hint{font-family:var(--font-game);font-size:5.5px;color:var(--dim);cursor:pointer;margin-top:3px;transition:color .1s}
+.story-hint:hover{color:var(--pink)}
 
-  .tb-actions {
-    display: flex;
-    gap: 2px;
-    margin-left: auto;
-  }
-  .tb-btn {
-    width: 28px; height: 28px;
-    border-radius: 6px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 14px;
-    color: var(--muted);
-    cursor: pointer;
-    transition: background 0.12s, color 0.12s;
-    position: relative;
-  }
-  .tb-btn:hover { background: rgba(255,255,255,0.06); color: var(--text); }
-  .tb-btn.on { color: var(--blue); }
+/* output */
+.output{overflow-y:auto;padding:11px 15px 6px;font-size:12.5px;line-height:1.65;min-height:0;background:var(--darker)}
+.line{display:flex;align-items:flex-start;min-height:1.65em}
+.line.cline{margin-top:5px}
+.ps1s{flex-shrink:0;white-space:pre}
+.out{white-space:pre-wrap;word-break:break-word;width:100%}
+.ct{color:var(--text)}.cm{color:var(--muted)}.cd{color:var(--dim)}
+.cs{color:var(--green)}.cw{color:#fbbf24}.ce{color:#f87171}
+.ci{color:var(--blue)}.cp{color:var(--purple)}.cc{color:var(--teal)}
+.cy{color:var(--yellow)}.cpk{color:var(--pink2)}
+.line.new{animation:fup .1s ease forwards}
+@keyframes fup{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}
 
-  /* tooltip */
-  .tb-btn[data-tip]:hover::after {
-    content: attr(data-tip);
-    position: absolute;
-    top: calc(100% + 6px);
-    right: 0;
-    background: #1e2530;
-    border: 1px solid var(--border2);
-    color: var(--text);
-    font-size: 11px;
-    padding: 4px 8px;
-    border-radius: 5px;
-    white-space: nowrap;
-    pointer-events: none;
-    z-index: 100;
-  }
+/* quiz */
+.qblock{background:rgba(255,110,180,.07);border:1px solid rgba(255,110,180,.22);border-radius:7px;padding:9px 11px;margin:5px 0;width:100%}
+.qq{font-family:var(--font-game);font-size:6.5px;color:var(--pink2);margin-bottom:7px;line-height:1.9}
+.qopts{display:flex;flex-direction:column;gap:3px}
+.qopt{font-family:var(--font-game);font-size:6.5px;padding:4px 8px;border-radius:4px;border:1px solid var(--border2);background:rgba(255,255,255,.03);cursor:pointer;color:var(--muted);transition:all .1s;text-align:left}
+.qopt:hover{background:rgba(255,110,180,.14);border-color:var(--pink);color:#fff}
+.qopt.ok{background:rgba(74,222,128,.18);border-color:var(--green);color:var(--green);pointer-events:none}
+.qopt.no{background:rgba(248,113,113,.13);border-color:var(--red);color:#f87171;pointer-events:none}
+.qopt.disabled{pointer-events:none;opacity:.45}
+.qres{font-family:var(--font-game);font-size:6.5px;margin-top:5px;line-height:1.8}
 
-  /* ── output ── */
-  .output {
-    overflow-y: auto;
-    padding: 14px 18px 6px;
-    font-size: 13px;
-    line-height: 1.65;
-    min-height: 0;
-    scrollbar-width: thin;
-    scrollbar-color: rgba(255,255,255,0.1) transparent;
-  }
-  .output::-webkit-scrollbar { width: 5px; }
-  .output::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+/* suggestions */
+.sugbar{display:flex;gap:5px;padding:7px 13px;border-top:1px solid var(--border);flex-wrap:wrap;background:rgba(0,0,0,.25);flex-shrink:0}
+.sug{font-family:var(--font-game);font-size:6px;padding:3px 8px;border-radius:4px;border:1px solid var(--border2);color:var(--muted);cursor:pointer;transition:all .1s;white-space:nowrap}
+.sug:hover{background:rgba(255,110,180,.14);border-color:var(--pink);color:var(--pink)}
 
-  .line { display: flex; align-items: flex-start; min-height: 1.65em; }
-  .line.cmd-line { margin-top: 6px; }
-  .ps1 { color: var(--green); white-space: pre; flex-shrink: 0; }
-  .ps1-path { color: var(--blue); }
-  .ps1-branch { color: var(--purple); }
-  .cmd-val { color: var(--cyan); }
+/* input */
+.irow{display:flex;align-items:center;padding:8px 13px 10px;border-top:1px solid var(--border);background:rgba(0,0,0,.3);flex-shrink:0;gap:0}
+.ips1{font-size:12px;white-space:pre;flex-shrink:0;pointer-events:none}
+.cin{flex:1;background:transparent;border:none;outline:none;color:var(--teal);font-size:12px;font-family:var(--font-mono);caret-color:var(--pink);min-width:0}
+.cin::placeholder{color:var(--dim)}
+.rbtn{background:rgba(255,110,180,.12);border:1px solid rgba(255,110,180,.28);color:var(--pink);padding:5px 11px;border-radius:5px;font-size:11px;cursor:pointer;font-family:var(--font-game);transition:all .12s;white-space:nowrap;flex-shrink:0}
+.rbtn:hover{background:rgba(255,110,180,.24);border-color:var(--pink2)}
+.rbtn:active{transform:scale(.95)}
 
-  .out { white-space: pre-wrap; word-break: break-word; width: 100%; }
-  .out.t  { color: var(--text); }
-  .out.m  { color: var(--muted2); }
-  .out.d  { color: var(--muted); }
-  .out.s  { color: var(--green); }
-  .out.w  { color: var(--yellow); }
-  .out.e  { color: var(--red); }
-  .out.i  { color: var(--blue); }
-  .out.p  { color: var(--purple); }
-  .out.c  { color: var(--cyan); }
-  .out.blank { display: block; height: 0.5em; }
+/* ── SIDE ── */
+.side{display:grid;grid-template-rows:auto 1fr auto;background:var(--panel);min-height:0;overflow:hidden}
+.stabs{display:flex;border-bottom:1px solid var(--border)}
+.stab{flex:1;font-family:var(--font-game);font-size:6px;padding:8px 3px;text-align:center;cursor:pointer;color:var(--dim);border-bottom:2px solid transparent;transition:all .1s;line-height:1.4}
+.stab.active{color:var(--pink);border-bottom-color:var(--pink)}
+.stab:hover:not(.active){color:var(--muted)}
+.scontent{overflow-y:auto;padding:10px;min-height:0}
 
-  /* typing animation for output lines */
-  @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(2px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-  .line.new { animation: fadeIn 0.12s ease forwards; }
+/* skill items */
+.skill{display:flex;align-items:center;gap:7px;padding:5px;border-radius:5px;margin-bottom:4px;border:1px solid var(--border);background:rgba(255,255,255,.015)}
+.skill-ico{font-size:14px;flex-shrink:0}
+.skill-info{flex:1;min-width:0}
+.skill-name{font-family:var(--font-game);font-size:5.5px;color:rgba(255,255,255,.8);margin-bottom:3px}
+.skill-bar{height:4px;background:rgba(255,255,255,.07);border-radius:2px;overflow:hidden}
+.skill-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--pink),var(--purple));transition:width .5s}
 
-  /* ── suggestions ── */
-  .suggestions {
-    display: flex;
-    gap: 6px;
-    padding: 8px 16px;
-    border-top: 1px solid var(--border);
-    flex-wrap: wrap;
-    background: rgba(0,0,0,0.15);
-    flex-shrink: 0;
-  }
-  .sug {
-    font-size: 11.5px;
-    padding: 3px 10px;
-    border-radius: 5px;
-    border: 1px solid var(--border2);
-    color: var(--muted2);
-    cursor: pointer;
-    transition: background 0.1s, color 0.1s, border-color 0.1s;
-    font-family: var(--font-mono);
-    white-space: nowrap;
-  }
-  .sug:hover { background: rgba(88,180,255,0.1); color: var(--blue); border-color: rgba(88,180,255,0.3); }
-  .sug.active-sug { background: rgba(57,217,138,0.08); color: var(--green); border-color: var(--green-dim); }
+/* daily card */
+.daily{background:rgba(255,214,0,.07);border:1px solid rgba(255,214,0,.22);border-radius:7px;padding:9px;margin-bottom:8px}
+.daily-t{font-family:var(--font-game);font-size:6.5px;color:var(--yellow);margin-bottom:5px}
+.daily-d{font-family:var(--font-game);font-size:6px;color:rgba(255,255,255,.55);line-height:1.9;margin-bottom:7px}
+.daily-btn{font-family:var(--font-game);font-size:6px;padding:5px;border-radius:4px;cursor:pointer;background:rgba(255,214,0,.14);border:1px solid rgba(255,214,0,.35);color:var(--yellow);width:100%;transition:all .1s}
+.daily-btn:hover{background:rgba(255,214,0,.24)}
 
-  /* ── input row ── */
-  .input-row {
-    display: flex;
-    align-items: center;
-    padding: 9px 18px 11px;
-    border-top: 1px solid var(--border);
-    gap: 0;
-    flex-shrink: 0;
-    background: rgba(0,0,0,0.2);
-  }
-  .in-ps1 {
-    display: flex;
-    align-items: center;
-    gap: 0;
-    flex-shrink: 0;
-    font-size: 13px;
-    pointer-events: none;
-    white-space: pre;
-  }
-  .cmd-in {
-    flex: 1;
-    background: transparent;
-    border: none;
-    outline: none;
-    color: var(--cyan);
-    font-size: 13px;
-    font-family: var(--font-mono);
-    caret-color: var(--green);
-    min-width: 0;
-  }
-  .cmd-in::placeholder { color: var(--muted); }
-  .run-btn {
-    background: rgba(57,217,138,0.1);
-    border: 1px solid rgba(57,217,138,0.25);
-    color: var(--green);
-    padding: 5px 14px;
-    border-radius: 6px;
-    font-size: 12px;
-    cursor: pointer;
-    font-family: var(--font-mono);
-    transition: background 0.15s, border-color 0.15s, transform 0.1s;
-    white-space: nowrap;
-    flex-shrink: 0;
-    letter-spacing: 0.03em;
-  }
-  .run-btn:hover { background: rgba(57,217,138,0.18); border-color: rgba(57,217,138,0.45); }
-  .run-btn:active { transform: scale(0.96); }
+/* inventory */
+.inv-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-bottom:8px}
+.islot{aspect-ratio:1;border-radius:5px;border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:15px;background:rgba(255,255,255,.03);cursor:pointer;transition:all .15s}
+.islot:hover:not(.empty){border-color:var(--pink);background:rgba(255,110,180,.1);transform:scale(1.08)}
+.islot.empty{opacity:.2;cursor:default}
 
-  /* ── status bar ── */
-  .statusbar {
-    display: flex;
-    align-items: center;
-    padding: 5px 18px;
-    gap: 14px;
-    font-size: 11px;
-    color: var(--muted);
-    background: var(--panel);
-    border-top: 1px solid var(--border);
-    flex-shrink: 0;
-    user-select: none;
-  }
-  .status-dot {
-    width: 6px; height: 6px;
-    border-radius: 50%;
-    background: var(--green);
-    flex-shrink: 0;
-    transition: background 0.2s;
-  }
-  .status-dot.busy { background: var(--yellow); }
-  .status-dot.err  { background: var(--red); }
-  .status-right { margin-left: auto; display: flex; gap: 14px; align-items: center; }
-  .status-sep { color: var(--border2); }
+/* leaderboard */
+.lbrow{display:flex;align-items:center;gap:5px;padding:5px;border-radius:5px;margin-bottom:3px}
+.lbrank{font-family:var(--font-game);font-size:6.5px;color:var(--dim);width:14px;text-align:right;flex-shrink:0}
+.lbav{font-size:13px;flex-shrink:0}
+.lbname{font-family:var(--font-game);font-size:6px;color:var(--muted);flex:1;min-width:0;overflow:hidden;white-space:nowrap}
+.lbscore{font-family:var(--font-game);font-size:6.5px;color:var(--yellow)}
+.lbrow.me{background:rgba(255,110,180,.1);border:1px solid rgba(255,110,180,.18)}
+.lbrow.me .lbname{color:var(--pink)}
 
-  /* ── help panel ── */
-  .help-panel {
-    position: absolute;
-    top: 52px; right: 14px;
-    width: 280px;
-    background: #1a2030;
-    border: 1px solid var(--border2);
-    border-radius: 10px;
-    padding: 14px;
-    z-index: 50;
-    font-size: 12px;
-    display: none;
-    box-shadow: 0 16px 48px rgba(0,0,0,0.5);
-  }
-  .help-panel.open { display: block; }
-  .help-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 10px; }
-  .help-row { display: flex; gap: 8px; margin-bottom: 7px; align-items: baseline; }
-  .help-cmd { color: var(--cyan); min-width: 110px; flex-shrink: 0; }
-  .help-desc { color: var(--muted2); }
+/* statusbar */
+.sbar{display:flex;align-items:center;gap:10px;padding:5px 13px;background:var(--panel3);border-top:1px solid var(--border);font-family:var(--font-game);font-size:6px;color:var(--dim);flex-shrink:0}
+.sdot{width:6px;height:6px;border-radius:50%;background:var(--green);flex-shrink:0;transition:background .2s}
+.sdot.busy{background:var(--yellow)}.sdot.err{background:var(--red)}
+.sright{margin-left:auto;display:flex;gap:10px}
 
-  /* ── search bar ── */
-  .search-bar {
-    display: none;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 18px;
-    border-bottom: 1px solid var(--border);
-    background: rgba(0,0,0,0.15);
-    flex-shrink: 0;
-  }
-  .search-bar.open { display: flex; }
-  .search-in {
-    flex: 1;
-    background: transparent;
-    border: none;
-    outline: none;
-    color: var(--text);
-    font-size: 12px;
-    font-family: var(--font-mono);
-  }
-  .search-label { font-size: 11px; color: var(--muted); white-space: nowrap; }
-  .search-count { font-size: 11px; color: var(--green); min-width: 32px; }
-  .search-close { cursor: pointer; color: var(--muted); font-size: 16px; line-height: 1; }
-  .search-close:hover { color: var(--text); }
-  .highlight { background: rgba(240,180,41,0.3); border-radius: 2px; }
-  .highlight.active-hl { background: rgba(57,217,138,0.4); }
+/* ── TOASTS ── */
+.toastwrap{position:fixed;top:72px;right:14px;z-index:999;display:flex;flex-direction:column;gap:5px;pointer-events:none}
+.toast{background:var(--panel2);border:2px solid var(--yellow);border-radius:7px;padding:7px 11px;display:flex;gap:7px;align-items:center;animation:tin .28s ease,tout .28s ease 2.7s forwards;pointer-events:none;max-width:240px}
+@keyframes tin{from{transform:translateX(110%);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes tout{from{opacity:1}to{opacity:0;transform:translateX(110%)}}
+.toast-ico{font-size:18px;flex-shrink:0}
+.toast-t{font-family:var(--font-game);font-size:6.5px;color:var(--yellow);margin-bottom:2px}
+.toast-s{font-family:var(--font-game);font-size:5.5px;color:var(--muted)}
 
-  @keyframes blink { 50% { opacity: 0; } }
+/* ── FLOATING POPS ── */
+.fpop{position:fixed;pointer-events:none;z-index:998;animation:fpopA .9s ease forwards}
+@keyframes fpopA{0%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-52px) scale(.5)}}
+.fpop.xp{font-family:var(--font-game);font-size:8px;color:var(--pink);text-shadow:0 0 6px var(--pink)}
+.fpop.coin{font-family:var(--font-game);font-size:8px;color:var(--yellow);text-shadow:0 0 6px var(--yellow)}
 
-  /* ── scrollbar gutter ── */
-  .output { scrollbar-gutter: stable; }
+/* ── LEVEL UP OVERLAY ── */
+.lvlup{position:fixed;inset:0;background:rgba(0,0,0,.88);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:500;animation:fadein .3s ease}
+@keyframes fadein{from{opacity:0}to{opacity:1}}
+.lvlup-inner{text-align:center;padding:28px;max-width:320px}
+.lvlup-stars{font-size:28px;margin-bottom:10px;animation:starspn 1s ease}
+@keyframes starspn{from{transform:scale(0) rotate(-180deg)}to{transform:scale(1) rotate(0)}}
+.lvlup-t{font-family:var(--font-game);font-size:18px;color:var(--yellow);margin-bottom:7px;text-shadow:0 0 18px var(--yellow);line-height:1.5}
+.lvlup-s{font-family:var(--font-game);font-size:8px;color:var(--pink);margin-bottom:22px;line-height:2.2}
+.lvlup-btn{font-family:var(--font-game);font-size:8px;padding:10px 22px;border-radius:5px;cursor:pointer;background:var(--yellow);color:var(--dark);border:none;transition:transform .1s}
+.lvlup-btn:hover{transform:scale(1.05)}.lvlup-btn:active{transform:scale(.97)}
 
-  /* ── mobile ── */
-  @media (max-width: 600px) {
-    .app { padding: 10px 10px 8px; gap: 10px; }
-    .output { font-size: 12px; padding: 10px 12px; }
-    .input-row { padding: 7px 12px 9px; }
-    .cmd-in { font-size: 12px; }
-    .run-btn { padding: 4px 10px; font-size: 11px; }
-    .tagline { display: none; }
-    .help-panel { right: 8px; width: 260px; }
-  }
+@media(max-width:680px){.main{grid-template-columns:1fr}.side{display:none}}
 </style>
 </head>
 <body>
 
-<div class="app">
-  <header>
-    <div class="logo">
-      <span class="logo-bracket">[</span>tryit<span class="logo-bracket">]</span>
-      <span class="logo-cursor"></span>
-    </div>
-    <span class="tagline">interactive terminal</span>
-    <div class="header-right">
-      <span class="pill green" id="connPill">● connected</span>
-      <span class="pill" id="histPill">0 cmds</span>
-    </div>
-  </header>
+<div class="toastwrap" id="toastwrap"></div>
 
-  <div class="shell" id="shell">
+<!-- HUD -->
+<div class="hud">
+  <div class="hud-logo">try<b>it</b></div>
+  <div class="hud-sep">◆</div>
+  <div class="hud-stat"><span class="hud-lbl">lvl</span><span class="hud-v white" id="hLvl">1</span></div>
+  <div class="hud-stat">
+    <div class="xp-wrap">
+      <span class="hud-lbl">xp</span>
+      <div class="xp-bar"><div class="xp-fill" id="xpFill"></div></div>
+      <span class="hud-v" id="hXp">0</span>
+    </div>
+  </div>
+  <div class="hud-stat"><span class="hud-lbl">hp</span><div class="hearts" id="heartsEl"></div></div>
+  <div class="hud-stat"><div class="coin-row"><div class="coin"></div><span class="hud-v" id="hCoins">0</span></div></div>
+  <div class="hud-stat"><span class="flame">🔥</span><span class="hud-v pink" id="hStreak">0</span><span class="hud-lbl">streak</span></div>
+  <div class="hud-right">
+    <div class="hbtn on" id="btnSave">💾 save</div>
+    <div class="hbtn" id="btnSound">🔊</div>
+  </div>
+</div>
 
-    <!-- title bar -->
-    <div class="titlebar">
-      <div class="dots">
-        <div class="dot r" title="close"></div>
-        <div class="dot y" title="minimise"></div>
-        <div class="dot g" title="maximise"></div>
+<!-- WORLD STRIP -->
+<div class="world-strip"><div class="wpath" id="wpath"></div></div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- TERMINAL -->
+  <div class="tpanel">
+    <div class="tbar">
+      <div class="tdots"><div class="tdot r"></div><div class="tdot y"></div><div class="tdot g"></div></div>
+      <div class="ttabs" id="ttabs"></div>
+      <span class="taddtab" id="addTab">+</span>
+      <div class="tbtns">
+        <div class="tbtn" id="btnClear" title="Clear">⌫</div>
+        <div class="tbtn" id="btnHint" title="Hint (costs 1 coin)">💡</div>
+        <div class="tbtn" id="btnSkip" title="Skip challenge">⏭</div>
+        <div class="tbtn" id="btnWrap" title="Word wrap">↵</div>
       </div>
-      <div class="tabs" id="tabsEl"></div>
-      <div class="tab-add" id="newTab" title="New tab">+</div>
-      <div class="tb-actions">
-        <div class="tb-btn" id="searchBtn" data-tip="Find (Ctrl+F)">⌕</div>
-        <div class="tb-btn" id="wrapBtn"   data-tip="Word wrap">↵</div>
-        <div class="tb-btn" id="clearBtn"  data-tip="Clear">⌫</div>
-        <div class="tb-btn" id="helpBtn"   data-tip="Commands">?</div>
+    </div>
+
+    <!-- story -->
+    <div class="story" id="storyEl">
+      <div class="kirby" id="kirbyEl">🎮</div>
+      <div class="story-wrap">
+        <div class="story-who" id="storyWho">KIRBY</div>
+        <div class="story-msg" id="storyMsg"></div>
+        <div class="story-hint" id="storyHint">▶ press Enter or click to continue</div>
       </div>
     </div>
 
-    <!-- search bar -->
-    <div class="search-bar" id="searchBar">
-      <span class="search-label">find:</span>
-      <input class="search-in" id="searchIn" placeholder="search output…" autocomplete="off" spellcheck="false" />
-      <span class="search-count" id="searchCount">0</span>
-      <span class="search-close" id="searchClose">×</span>
-    </div>
-
-    <!-- output -->
     <div class="output" id="output"></div>
 
-    <!-- suggestions -->
-    <div class="suggestions" id="sugBar"></div>
+    <div class="sugbar" id="sugbar"></div>
 
-    <!-- input -->
-    <div class="input-row">
-      <span class="in-ps1" id="inPS1"></span>
-      <input class="cmd-in" id="cmdIn" placeholder="type a command… (or try 'help')" autocomplete="off" spellcheck="false" />
-      <button class="run-btn" id="runBtn">▶ run</button>
+    <div class="irow">
+      <span class="ips1" id="ips1"></span>
+      <input class="cin" id="cin" placeholder="type a command… (try 'help')" autocomplete="off" spellcheck="false"/>
+      <button class="rbtn" id="rbtn">▶ run</button>
     </div>
+  </div>
 
-    <!-- status bar -->
-    <div class="statusbar">
-      <div class="status-dot" id="statusDot"></div>
-      <span id="statusMsg">ready</span>
-      <div class="status-right">
-        <span id="branchSt">⎇ main</span>
-        <span class="status-sep">│</span>
-        <span id="exitSt">exit 0</span>
-        <span class="status-sep">│</span>
-        <span id="clockSt"></span>
-      </div>
+  <!-- SIDE -->
+  <div class="side">
+    <div class="stabs">
+      <div class="stab active" data-s="skills">⚔️<br>skills</div>
+      <div class="stab" data-s="inv">🎒<br>items</div>
+      <div class="stab" data-s="lb">🏆<br>ranks</div>
     </div>
-
-    <!-- help panel -->
-    <div class="help-panel" id="helpPanel">
-      <div class="help-title">available commands</div>
-      <div id="helpRows"></div>
+    <div class="scontent" id="scontent"></div>
+    <div class="sbar">
+      <div class="sdot" id="sdot"></div>
+      <span id="smsg">ready</span>
+      <div class="sright"><span id="sbranch">⎇ main</span><span id="sclock"></span></div>
     </div>
+  </div>
+</div>
 
+<!-- LEVEL UP -->
+<div class="lvlup" id="lvlupEl">
+  <div class="lvlup-inner">
+    <div class="lvlup-stars">⭐✨🌟✨⭐</div>
+    <div class="lvlup-t" id="lvlupT">LEVEL UP!</div>
+    <div class="lvlup-s" id="lvlupS">You reached level 2!</div>
+    <button class="lvlup-btn" id="lvlupBtn">CONTINUE →</button>
   </div>
 </div>
 
 <script>
-// ─────────────────────────────────────────────
+// ═══════════════════════════
 //  STATE
-// ─────────────────────────────────────────────
-let tabs = [{ id: 1, name: 'bash', lines: [] }];
-let activeTab = 0;
-let cmdHistory = [];
-let histIdx = -1;
-let wordWrap = true;
-let helpOpen = false;
-let searchOpen = false;
-let lastExit = 0;
-let tabCounter = 1;
-
-// ─────────────────────────────────────────────
-//  DOM refs
-// ─────────────────────────────────────────────
-const output    = document.getElementById('output');
-const cmdIn     = document.getElementById('cmdIn');
-const runBtn    = document.getElementById('runBtn');
-const tabsEl    = document.getElementById('tabsEl');
-const newTab    = document.getElementById('newTab');
-const clearBtn  = document.getElementById('clearBtn');
-const wrapBtn   = document.getElementById('wrapBtn');
-const helpBtn   = document.getElementById('helpBtn');
-const helpPanel = document.getElementById('helpPanel');
-const helpRows  = document.getElementById('helpRows');
-const statusDot = document.getElementById('statusDot');
-const statusMsg = document.getElementById('statusMsg');
-const branchSt  = document.getElementById('branchSt');
-const exitSt    = document.getElementById('exitSt');
-const clockSt   = document.getElementById('clockSt');
-const histPill  = document.getElementById('histPill');
-const sugBar    = document.getElementById('sugBar');
-const inPS1     = document.getElementById('inPS1');
-const searchBtn = document.getElementById('searchBtn');
-const searchBar = document.getElementById('searchBar');
-const searchIn  = document.getElementById('searchIn');
-const searchCount = document.getElementById('searchCount');
-const searchClose = document.getElementById('searchClose');
-
-// ─────────────────────────────────────────────
-//  COMMAND DEFINITIONS
-// ─────────────────────────────────────────────
-const FS = {
-  '/': { type: 'dir', children: ['home', 'etc', 'usr'] },
-  '/home': { type: 'dir', children: ['user'] },
-  '/home/user': { type: 'dir', children: ['projects', 'notes.md', '.bashrc'] },
-  '/home/user/projects': { type: 'dir', children: ['tryit', 'demo-app'] },
-  '/home/user/projects/tryit': { type: 'dir', children: ['index.html', 'README.md', 'package.json'] },
-};
-let cwd = '/home/user/projects/tryit';
-
-const BRANCH = 'main';
-
-function ps1Parts() {
-  const short = cwd.replace('/home/user', '~');
-  return { path: short, branch: BRANCH };
-}
-
-function renderPS1(el) {
-  const p = ps1Parts();
-  el.innerHTML =
-    `<span style="color:var(--green)">user</span>` +
-    `<span style="color:var(--muted)">@</span>` +
-    `<span style="color:var(--blue)">tryit</span> ` +
-    `<span style="color:var(--cyan)">${p.path}</span> ` +
-    `<span style="color:var(--purple)">(${p.branch})</span>` +
-    `<span style="color:var(--green)"> $ </span>`;
-}
-
-const CMDS = {
-  help: {
-    desc: 'list commands',
-    run() {
-      return [
-        {c:'i', v:'╭─ tryit — available commands ────────────────╮'},
-        ...Object.entries(CMDS).map(([k,v]) => ({c:'t', v:`  ${k.padEnd(18,' ')}${v.desc}`})),
-        {c:'i', v:'╰─────────────────────────────────────────────╯'},
-      ];
-    }
-  },
-  ls: {
-    desc: 'list directory contents',
-    run(args) {
-      const long = args.includes('-la') || args.includes('-l') || args.includes('-a');
-      const node = FS[cwd];
-      if (!node) return [{c:'e', v:`ls: cannot access '${cwd}': No such file or directory`}];
-      const items = node.children || [];
-      if (!long) return [{c:'t', v:items.join('  ')}];
-      const now = new Date();
-      const mon = now.toLocaleString('en',{month:'short'});
-      const day = String(now.getDate()).padStart(2,' ');
-      return [
-        {c:'d', v:`total ${items.length * 4}`},
-        ...items.map(i => {
-          const isDir = FS[cwd + '/' + i]?.type === 'dir';
-          return {c: isDir ? 'p' : 't', v:`${isDir?'drwxr-xr-x':'-rw-r--r--'}  1 user staff   ${String(Math.floor(Math.random()*4000+200)).padStart(5)} ${mon} ${day} ${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')} ${i}`};
-        }),
-      ];
-    }
-  },
-  pwd: { desc: 'print working directory', run() { return [{c:'t', v:cwd}]; } },
-  cd: {
-    desc: 'change directory',
-    run(args) {
-      const target = args[0] || '/home/user';
-      let next = target.startsWith('/') ? target : cwd + '/' + target;
-      // resolve ..
-      next = next.split('/').reduce((a, p) => {
-        if (p === '..') a.pop();
-        else if (p && p !== '.') a.push(p);
-        return a;
-      }, []).join('/') || '/';
-      if (!next.startsWith('/')) next = '/' + next;
-      if (FS[next] && FS[next].type === 'dir') { cwd = next; renderPS1(inPS1); return []; }
-      return [{c:'e', v:`cd: ${target}: No such file or directory`}];
-    }
-  },
-  cat: {
-    desc: 'show file contents',
-    run(args) {
-      if (!args[0]) return [{c:'e', v:'cat: missing operand'}];
-      const f = args[0];
-      const files = {
-        'README.md':    [{c:'i',v:'# tryit'},{c:'',v:''},{c:'t',v:'An interactive browser-based terminal playground.'},{c:'',v:''},{c:'m',v:'## Usage'},{c:'t',v:'Open index.html in any browser. No server needed.'}],
-        'index.html':   [{c:'m',v:'<!DOCTYPE html>'},{c:'t',v:'<html lang="en">...'},{c:'d',v:'<!-- 500+ lines of terminal goodness -->'}],
-        'package.json': [{c:'t',v:'{'},{c:'c',v:'  "name": "tryit",'},{c:'c',v:'  "version": "1.0.0",'},{c:'c',v:'  "description": "browser terminal playground"'},{c:'t',v:'}'}],
-        'notes.md':     [{c:'t',v:'# notes'},{c:'',v:''},{c:'m',v:'- improve autocomplete'},{c:'m',v:'- add themes'},{c:'m',v:'- multi-tab persistence'}],
-        '.bashrc':      [{c:'d',v:'# .bashrc'},{c:'d',v:'export PS1="\\u@\\h:\\w$ "'},{c:'d',v:'alias ll="ls -la"'}],
-      };
-      const name = f.split('/').pop();
-      return files[name] || [{c:'e', v:`cat: ${f}: No such file or directory`}];
-    }
-  },
-  echo: {
-    desc: 'print text to stdout',
-    run(args) { return [{c:'t', v: args.join(' ')}]; }
-  },
-  whoami: { desc: 'current user', run() { return [{c:'t', v:'user'}]; } },
-  date: {
-    desc: 'show current date/time',
-    run() { return [{c:'t', v: new Date().toString()}]; }
-  },
-  uname: {
-    desc: 'system information',
-    run(args) {
-      if (args.includes('-a')) return [{c:'t',v:'Linux tryit 5.15.0-browser x86_64 GNU/Linux'}];
-      return [{c:'t',v:'Linux'}];
-    }
-  },
-  uptime: {
-    desc: 'system uptime',
-    run() {
-      const s = Math.floor(performance.now()/1000);
-      const h = Math.floor(s/3600), m = Math.floor((s%3600)/60);
-      return [{c:'t', v:` ${new Date().toLocaleTimeString()} up ${h}:${String(m).padStart(2,'0')},  1 user,  load average: 0.12, 0.08, 0.04`}];
-    }
-  },
-  history: {
-    desc: 'command history',
-    run() {
-      if (!cmdHistory.length) return [{c:'m', v:'no history yet'}];
-      return cmdHistory.map((h,i) => ({c:'t', v:`  ${String(i+1).padStart(4)}  ${h}`}));
-    }
-  },
-  clear: { desc: 'clear the terminal', run() { return '__CLEAR__'; } },
-  'git status': {
-    desc: 'repo status',
-    run() {
-      return [
-        {c:'i', v:'On branch main'},
-        {c:'t', v:"Your branch is up to date with 'origin/main'."},
-        {c:'', v:''},
-        {c:'w', v:'Changes not staged for commit:'},
-        {c:'d', v:'  (use "git add <file>..." to update what will be committed)'},
-        {c:'e', v:'        modified:   index.html'},
-        {c:'', v:''},
-        {c:'m', v:'no changes added to commit (use "git add" and/or "git commit -a")'},
-      ];
-    }
-  },
-  'git log': {
-    desc: 'commit log',
-    run(args) {
-      const oneline = args.includes('--oneline');
-      const commits = [
-        { hash:'a3f9c12', msg:'feat: add search, tabs, command history', author:'you', date:'Thu Apr  3 09:00:00 2026' },
-        { hash:'b81d2fe', msg:'fix: resolve input focus on mobile',       author:'you', date:'Wed Apr  2 14:22:00 2026' },
-        { hash:'c44a801', msg:'feat: word wrap toggle & status bar',      author:'you', date:'Mon Mar 31 10:10:00 2026' },
-        { hash:'d112ff0', msg:'init: project scaffold',                   author:'you', date:'Sat Mar 29 08:00:00 2026' },
-      ];
-      if (oneline) return commits.map(c => ({c:'p', v:`${c.hash} ${c.msg}`}));
-      return commits.flatMap(c => [
-        {c:'p', v:`commit ${c.hash}`},
-        {c:'t', v:`Author: ${c.author} <${c.author}@example.com>`},
-        {c:'t', v:`Date:   ${c.date}`},
-        {c:'', v:''},
-        {c:'t', v:`    ${c.msg}`},
-        {c:'', v:''},
-      ]);
-    }
-  },
-  'git diff': {
-    desc: 'show changes',
-    run() {
-      return [
-        {c:'i', v:'diff --git a/index.html b/index.html'},
-        {c:'m', v:'index a1b2c3..d4e5f6 100644'},
-        {c:'m', v:'--- a/index.html'},
-        {c:'m', v:'+++ b/index.html'},
-        {c:'m', v:'@@ -120,7 +120,10 @@'},
-        {c:'e', v:'-  // old terminal code'},
-        {c:'s', v:'+  // enhanced terminal with tabs, search, history'},
-        {c:'s', v:'+  // word wrap, suggestions, status bar'},
-        {c:'s', v:'+  // command autocomplete & FS simulation'},
-      ];
-    }
-  },
-  'npm run dev': {
-    desc: 'start dev server',
-    run() {
-      return [
-        {c:'i', v:'> tryit@1.0.0 dev'},
-        {c:'i', v:'> vite --open'},
-        {c:'', v:''},
-        {c:'s', v:'  VITE v5.2.1  ready in 287 ms'},
-        {c:'', v:''},
-        {c:'t', v:'  ➜  Local:   http://localhost:5173/'},
-        {c:'t', v:'  ➜  Network: use --host to expose'},
-        {c:'m', v:'  ➜  press h + enter to show help'},
-      ];
-    }
-  },
-  'npm install': {
-    desc: 'install dependencies',
-    run() {
-      return [
-        {c:'m', v:'npm warn deprecated inflight@1.0.6'},
-        {c:'t', v:''},
-        {c:'s', v:'added 42 packages in 1.8s'},
-        {c:'m', v:'3 packages are looking for funding'},
-      ];
-    }
-  },
-  curl: {
-    desc: 'transfer data from URL',
-    run(args) {
-      const url = args.find(a => !a.startsWith('-')) || '';
-      if (!url) return [{c:'e', v:'curl: no URL specified'}];
-      return [
-        {c:'m', v:`  % Total    % Received % Xferd  Average Speed   Time`},
-        {c:'m', v:`100   248  100   248    0     0   4133      0 --:--:-- --:--:--`},
-        {c:'t', v:`{"status":"ok","url":"${url}","method":"GET"}`},
-      ];
-    }
-  },
-  ping: {
-    desc: 'ping a host',
-    run(args) {
-      const host = args[0] || 'localhost';
-      return [
-        {c:'t', v:`PING ${host}: 56 data bytes`},
-        {c:'s', v:`64 bytes from ${host}: icmp_seq=0 ttl=64 time=0.12 ms`},
-        {c:'s', v:`64 bytes from ${host}: icmp_seq=1 ttl=64 time=0.10 ms`},
-        {c:'s', v:`64 bytes from ${host}: icmp_seq=2 ttl=64 time=0.11 ms`},
-        {c:'', v:''},
-        {c:'t', v:`--- ${host} ping statistics ---`},
-        {c:'t', v:`3 packets transmitted, 3 received, 0% packet loss`},
-      ];
-    }
-  },
-  env: {
-    desc: 'print environment variables',
-    run() {
-      return [
-        {c:'t', v:'HOME=/home/user'},
-        {c:'t', v:'USER=user'},
-        {c:'t', v:'SHELL=/bin/bash'},
-        {c:'t', v:'TERM=xterm-256color'},
-        {c:'t', v:'PATH=/usr/local/bin:/usr/bin:/bin'},
-        {c:'t', v:'EDITOR=vim'},
-        {c:'t', v:'LANG=en_US.UTF-8'},
-      ];
-    }
-  },
-  tree: {
-    desc: 'show directory tree',
-    run() {
-      return [
-        {c:'t', v:'.'},
-        {c:'p', v:'├── index.html'},
-        {c:'p', v:'├── README.md'},
-        {c:'p', v:'└── package.json'},
-        {c:'', v:''},
-        {c:'m', v:'0 directories, 3 files'},
-      ];
-    }
-  },
-  exit: {
-    desc: 'close current tab',
-    run() { closeTab(activeTab); return []; }
-  },
+// ═══════════════════════════
+const G={
+  xp:0,level:1,coins:0,hp:3,maxHp:3,streak:0,cmdCount:0,
+  quizRight:0,storyDone:false,
+  achievements:new Set(),
+  skills:{linux:0,git:0,js:0,bash:0,python:0},
+  world:0,
+  challenge:null,challengeIdx:0,
+  tabs:[{id:1,name:'bash',lines:[]}],
+  tab:0,tabN:1,
+  hist:[],histI:-1,
+  wrap:true,sTab:'skills',
 };
 
-// ─────────────────────────────────────────────
-//  SUGGESTIONS
-// ─────────────────────────────────────────────
-const ALL_SUGGESTIONS = [
-  'help','ls -la','pwd','git status','git log --oneline',
-  'git diff','npm run dev','cat README.md','tree','history',
-  'echo hello world','uname -a','env','clear',
+const XP_LVL=[0,100,250,450,700,1000,1400,1900,2500,3200];
+
+const WORLDS=[
+  {icon:'🏰',label:'Castle\nStart',topic:'intro',done:false,locked:false},
+  {icon:'🌿',label:'Linux\nForest',topic:'linux',done:false,locked:false},
+  {icon:'🔥',label:'Git\nVolcano',topic:'git',done:false,locked:true},
+  {icon:'⚡',label:'JS\nStorm',topic:'js',done:false,locked:true},
+  {icon:'🐍',label:'Python\nSwamp',topic:'python',done:false,locked:true},
+  {icon:'☁️',label:'Cloud\nSky',topic:'cloud',done:false,locked:true},
+  {icon:'🏆',label:'Final\nBoss',topic:'boss',done:false,locked:true},
 ];
 
-function renderSuggestions(filter = '') {
-  const items = filter
-    ? ALL_SUGGESTIONS.filter(s => s.startsWith(filter) && s !== filter)
-    : ALL_SUGGESTIONS.slice(0, 10);
-  sugBar.innerHTML = '';
-  items.slice(0, 12).forEach(s => {
-    const el = document.createElement('span');
-    el.className = 'sug';
-    el.textContent = s;
-    el.addEventListener('click', () => { cmdIn.value = s; cmdIn.focus(); });
-    sugBar.appendChild(el);
+const STORIES={
+  intro:[
+    {who:'KIRBY',av:'🎮',t:'Poyo! Welcome to TryIt Quest! I\'m Kirby, your guide!'},
+    {who:'KIRBY',av:'🎮',t:'Type commands to defeat enemies, earn XP, and level up!'},
+    {who:'KIRBY',av:'🎮',t:'Start with "help" to see all commands. Let\'s go! 🌟'},
+  ],
+  linux:[
+    {who:'MARIO',av:'👨‍🔧',t:'Wahoo! Welcome to Linux Forest! It\'s-a me, Mario!'},
+    {who:'MARIO',av:'👨‍🔧',t:'Bowser scrambled all the files! Use ls, cd and cat to fix it!'},
+    {who:'BOWSER',av:'🐉',t:'GWAHAHA! You\'ll NEVER navigate MY filesystem maze!'},
+  ],
+  git:[
+    {who:'KIRBY',av:'🎮',t:'Poyo! The Git Volcano is erupting with untracked changes!'},
+    {who:'TOAD',av:'🍄',t:'The commit history is on FIRE! We need git status NOW!'},
+  ],
+  js:[
+    {who:'PEACH',av:'👸',t:'Oh no! JavaScript gremlins broke all the functions!'},
+    {who:'KIRBY',av:'🎮',t:'Don\'t worry Princess! Our terminal powers will fix it! Poyo!'},
+  ],
+  python:[
+    {who:'YOSHI',av:'🦕',t:'Yoshi! The Python Swamp is full of IndentationErrors!'},
+    {who:'KIRBY',av:'🎮',t:'We\'ll squash those bugs together! Poyo poyo!'},
+  ],
+  cloud:[
+    {who:'LAKITU',av:'🌩',t:'Hey! Cloud services are down! Deploy commands needed fast!'},
+  ],
+  boss:[
+    {who:'BOWSER',av:'🐉',t:'GWAHAHA! You made it this far?! Face my FINAL CHALLENGE!'},
+    {who:'KIRBY',av:'🎮',t:'We\'ve come so far! Let\'s finish this! POYO!!!'},
+  ],
+};
+
+const CHALLENGES={
+  intro:[
+    {type:'quiz',q:'What command lists files in a directory?',opts:['ls','show','dir','list'],correct:0,xp:15,coins:3},
+    {type:'type',prompt:'Type the command to print working directory:',answer:'pwd',xp:20,coins:5},
+    {type:'quiz',q:'Which flag shows ALL files (including hidden)?',opts:['-a','-h','-l','-v'],correct:0,xp:15,coins:3},
+    {type:'type',prompt:'List ALL files including hidden ones:',answer:'ls -a',xp:25,coins:6},
+  ],
+  linux:[
+    {type:'quiz',q:'What does "cd .." do?',opts:['Go up one directory','Delete folder','Create dir','List files'],correct:0,xp:20,coins:5},
+    {type:'type',prompt:'Navigate to home directory:',answer:'cd ~',xp:25,coins:6},
+    {type:'quiz',q:'Which command shows a file\'s contents?',opts:['cat','read','open','view'],correct:0,xp:20,coins:5},
+    {type:'type',prompt:'Show long listing of all files:',answer:'ls -la',xp:30,coins:7},
+    {type:'quiz',q:'What does chmod 755 set permissions to?',opts:['rwxr-xr-x','rwxrwxrwx','r--r--r--','rw-rw-rw-'],correct:0,xp:35,coins:10},
+  ],
+  git:[
+    {type:'quiz',q:'What does "git init" do?',opts:['Creates a new repo','Clones a repo','Deletes history','Merges branches'],correct:0,xp:20,coins:5},
+    {type:'type',prompt:'Check the status of your repo:',answer:'git status',xp:25,coins:6},
+    {type:'quiz',q:'What does HEAD point to?',opts:['Current commit','Remote branch','Stash','Config file'],correct:0,xp:25,coins:6},
+    {type:'type',prompt:'Show one-line commit log:',answer:'git log --oneline',xp:30,coins:8},
+    {type:'quiz',q:'Which command stages ALL changes?',opts:['git add .','git stage','git push','git save'],correct:0,xp:25,coins:6},
+  ],
+  js:[
+    {type:'quiz',q:'What does typeof null return in JS?',opts:['"object"','"null"','"undefined"','"string"'],correct:0,xp:25,coins:6},
+    {type:'quiz',q:'Which method adds to end of an array?',opts:['push()','pop()','shift()','splice()'],correct:0,xp:20,coins:5},
+    {type:'quiz',q:'What is === in JavaScript?',opts:['Strict equality','Assignment','Loose equality','Not equal'],correct:0,xp:25,coins:6},
+  ],
+  python:[
+    {type:'quiz',q:'What is a Python list comprehension?',opts:['[x for x in y]','(x for x in y)','map(x,y)','{x:y for x}'],correct:0,xp:30,coins:8},
+    {type:'quiz',q:'Which keyword defines a function in Python?',opts:['def','function','fn','func'],correct:0,xp:20,coins:5},
+  ],
+  cloud:[
+    {type:'quiz',q:'What does CI/CD stand for?',opts:['Continuous Integration/Delivery','Code In/Code Done','Cloud Infrastructure/Deployment','None of these'],correct:0,xp:30,coins:8},
+  ],
+  boss:[
+    {type:'quiz',q:'Which git command undoes the last commit but keeps changes?',opts:['git reset HEAD~1','git revert HEAD','git checkout HEAD','git stash'],correct:0,xp:50,coins:15},
+    {type:'type',prompt:'The FINAL move — check git status:',answer:'git status',xp:50,coins:20},
+  ],
+};
+
+const ACHS=[
+  {id:'first',ico:'⚡',t:'First Strike!',s:'Run your first command',ok:()=>G.cmdCount>=1},
+  {id:'s5',ico:'🔥',t:'On Fire!',s:'5-command streak',ok:()=>G.streak>=5},
+  {id:'s10',ico:'💥',t:'COMBO x10!',s:'10-command streak',ok:()=>G.streak>=10},
+  {id:'l3',ico:'⭐',t:'Star Power!',s:'Reached level 3',ok:()=>G.level>=3},
+  {id:'c50',ico:'💰',t:'Coin Hoarder!',s:'Collected 50 coins',ok:()=>G.coins>=50},
+  {id:'q5',ico:'🎓',t:'Quiz Ace!',s:'Answered 5 quizzes correctly',ok:()=>G.quizRight>=5},
+  {id:'exp',ico:'🗺',t:'Explorer!',s:'Unlocked 3 worlds',ok:()=>G.world>=2},
+  {id:'l5',ico:'🏅',t:'Level 5 Hero!',s:'Reached level 5',ok:()=>G.level>=5},
+];
+
+// ═══════════════════════════
+//  DOM
+// ═══════════════════════════
+const output =document.getElementById('output');
+const cin    =document.getElementById('cin');
+const rbtn   =document.getElementById('rbtn');
+const ips1   =document.getElementById('ips1');
+const sugbar =document.getElementById('sugbar');
+const storyMsg=document.getElementById('storyMsg');
+const storyWho=document.getElementById('storyWho');
+const kirbyEl=document.getElementById('kirbyEl');
+const storyHint=document.getElementById('storyHint');
+const ttabs  =document.getElementById('ttabs');
+const addTab =document.getElementById('addTab');
+const wpath  =document.getElementById('wpath');
+const scontent=document.getElementById('scontent');
+const hLvl   =document.getElementById('hLvl');
+const hXp    =document.getElementById('hXp');
+const xpFill =document.getElementById('xpFill');
+const hCoins =document.getElementById('hCoins');
+const hStreak=document.getElementById('hStreak');
+const heartsEl=document.getElementById('heartsEl');
+const sdot   =document.getElementById('sdot');
+const smsg   =document.getElementById('smsg');
+const sclock =document.getElementById('sclock');
+const lvlupEl=document.getElementById('lvlupEl');
+const lvlupT =document.getElementById('lvlupT');
+const lvlupS =document.getElementById('lvlupS');
+const lvlupBtn=document.getElementById('lvlupBtn');
+const toastwrap=document.getElementById('toastwrap');
+
+// ═══════════════════════════
+//  HUD
+// ═══════════════════════════
+function updHUD(){
+  hLvl.textContent=G.level;
+  hXp.textContent=G.xp;
+  hCoins.textContent=G.coins;
+  hStreak.textContent=G.streak;
+  const lo=XP_LVL[G.level-1]||0,hi=XP_LVL[G.level]||9999;
+  xpFill.style.width=Math.min(100,((G.xp-lo)/(hi-lo))*100)+'%';
+  heartsEl.innerHTML='';
+  for(let i=0;i<G.maxHp;i++){
+    const h=document.createElement('span');
+    h.className='heart'+(i<G.hp?' ':' empty');h.textContent='♥';
+    heartsEl.appendChild(h);
+  }
+}
+
+function addXP(n,el){
+  G.xp+=n;pop('+'+n+'xp',el,'xp');
+  checkLvl();updHUD();
+}
+function addCoins(n,el){
+  G.coins+=n;pop('+'+n+'🪙',el,'coin');
+  updHUD();checkAchs();
+}
+function loseHP(){
+  G.hp=Math.max(0,G.hp-1);G.streak=0;updHUD();
+  if(G.hp<=0){toast('💀','Knocked Out!','Respawning…');G.hp=G.maxHp;updHUD();}
+}
+function checkLvl(){
+  const next=XP_LVL[G.level]||99999;
+  if(G.xp>=next&&G.level<9){
+    G.level++;
+    lvlupT.textContent='LEVEL UP!';
+    lvlupS.textContent=`You reached Level ${G.level}!\n+1 Heart restored ✨`;
+    G.hp=Math.min(G.maxHp,G.hp+1);
+    lvlupEl.style.display='flex';
+    updHUD();checkAchs();
+  }
+}
+function checkAchs(){
+  ACHS.forEach(a=>{
+    if(!G.achievements.has(a.id)&&a.ok()){
+      G.achievements.add(a.id);
+      toast(a.ico,a.t,a.s);
+    }
   });
 }
-renderSuggestions();
+function pop(txt,ref,type){
+  const el=document.createElement('div');
+  el.className='fpop '+type;el.textContent=txt;
+  const r=(ref||rbtn).getBoundingClientRect();
+  el.style.left=r.left+'px';el.style.top=(r.top-10)+'px';
+  document.body.appendChild(el);
+  setTimeout(()=>el.remove(),920);
+}
+function toast(ico,t,s){
+  const el=document.createElement('div');
+  el.className='toast';
+  el.innerHTML=`<div class="toast-ico">${ico}</div><div><div class="toast-t">${t}</div><div class="toast-s">${s}</div></div>`;
+  toastwrap.appendChild(el);
+  setTimeout(()=>el.remove(),3100);
+}
 
-// ─────────────────────────────────────────────
-//  HELP PANEL
-// ─────────────────────────────────────────────
-function buildHelp() {
-  helpRows.innerHTML = '';
-  Object.entries(CMDS).forEach(([k, v]) => {
-    const row = document.createElement('div');
-    row.className = 'help-row';
-    row.innerHTML = `<span class="help-cmd">${k}</span><span class="help-desc">${v.desc}</span>`;
-    helpRows.appendChild(row);
+// ═══════════════════════════
+//  STORY TYPEWRITER
+// ═══════════════════════════
+let sq=[],si=0,typing=false,skipT=false;
+
+function queueStory(lines){sq=lines;si=0;nextStory();}
+function nextStory(){
+  if(si>=sq.length){
+    storyMsg.innerHTML='<span class="cd">— ready. type a command or try "quiz" —</span>';
+    storyHint.textContent='';
+    G.storyDone=true;
+    showChallenge();
+    return;
+  }
+  const l=sq[si++];
+  storyWho.textContent=l.who;
+  kirbyEl.textContent=l.av;
+  typeText(l.t);
+}
+function typeText(txt){
+  typing=true;skipT=false;storyMsg.innerHTML='';
+  let i=0;
+  function step(){
+    if(skipT){storyMsg.textContent=txt;addCur();typing=false;storyHint.textContent='▶ press Enter or click to continue';return;}
+    if(i<txt.length){storyMsg.textContent=txt.slice(0,++i);addCur();setTimeout(step,22);}
+    else{typing=false;storyHint.textContent='▶ press Enter or click to continue';}
+  }
+  function addCur(){const c=document.createElement('span');c.className='cur';storyMsg.appendChild(c);}
+  storyHint.textContent='';
+  step();
+}
+function advStory(){if(typing){skipT=true;return;}nextStory();}
+storyHint.addEventListener('click',advStory);
+kirbyEl.addEventListener('click',advStory);
+
+// ═══════════════════════════
+//  WORLD MAP
+// ═══════════════════════════
+function renderMap(){
+  wpath.innerHTML='';
+  WORLDS.forEach((w,i)=>{
+    const nd=document.createElement('div');
+    nd.className='wnode'+(w.done?' done':'')+(w.locked?' locked':'')+(i===G.world?' active':'');
+    nd.innerHTML=`<div class="wnode-icon">${w.icon}</div><div class="wnode-label">${w.label}</div><div class="wnode-stars">${w.done?'★★★':i===G.world?'☆☆☆':''}</div>`;
+    if(!w.locked)nd.addEventListener('click',()=>enterWorld(i));
+    wpath.appendChild(nd);
+    if(i<WORLDS.length-1){
+      const ln=document.createElement('div');
+      ln.className='wline'+(w.done?' done':'');
+      wpath.appendChild(ln);
+    }
   });
 }
-buildHelp();
-
-// ─────────────────────────────────────────────
-//  TABS
-// ─────────────────────────────────────────────
-function renderTabs() {
-  tabsEl.innerHTML = '';
-  tabs.forEach((t, i) => {
-    const el = document.createElement('div');
-    el.className = 'tab' + (i === activeTab ? ' active' : '');
-    el.innerHTML = `<span>${t.name}</span><span class="tab-x">×</span>`;
-    el.addEventListener('click', e => {
-      if (e.target.classList.contains('tab-x')) { closeTab(i); return; }
-      switchTab(i);
-    });
-    tabsEl.appendChild(el);
-  });
+function enterWorld(i){
+  G.world=i;G.challengeIdx=0;G.challenge=null;
+  renderMap();
+  const w=WORLDS[i];
+  clearOutput();
+  G.storyDone=false;
+  queueStory(STORIES[w.topic]||STORIES.intro);
+  appendLine('cpk',`\n  ══ Entered: ${w.icon} ${w.label.replace('\n',' ')} ══\n`);
+  updSkills();
+  G.achievements.has('exp')||checkAchs();
 }
 
-function switchTab(i) {
-  saveTabLines();
-  activeTab = i;
-  renderTabs();
-  loadTabLines();
-  renderPS1(inPS1);
-  cmdIn.focus();
+// ═══════════════════════════
+//  CHALLENGES
+// ═══════════════════════════
+function showChallenge(){
+  const list=CHALLENGES[WORLDS[G.world].topic]||CHALLENGES.intro;
+  if(G.challengeIdx>=list.length){worldDone();return;}
+  const ch=list[G.challengeIdx];
+  G.challenge=ch;
+  renderChallenge(ch);
 }
-
-function closeTab(i) {
-  if (tabs.length === 1) { clearOutput(); return; }
-  tabs.splice(i, 1);
-  activeTab = Math.min(activeTab, tabs.length - 1);
-  renderTabs();
-  loadTabLines();
-}
-
-function addTab() {
-  saveTabLines();
-  tabCounter++;
-  tabs.push({ id: tabCounter, name: `bash ${tabCounter}`, lines: [] });
-  activeTab = tabs.length - 1;
-  renderTabs();
-  loadTabLines();
-  appendLine('d', `new session — bash ${tabCounter}`);
-  cmdIn.focus();
-}
-
-function saveTabLines() {
-  tabs[activeTab].lines = Array.from(output.children).map(el => el.outerHTML);
-}
-function loadTabLines() {
-  output.innerHTML = tabs[activeTab].lines.join('');
-  output.scrollTop = output.scrollHeight;
-}
-
-// ─────────────────────────────────────────────
-//  OUTPUT HELPERS
-// ─────────────────────────────────────────────
-function appendLine(cls, text, animate = true) {
-  const div = document.createElement('div');
-  div.className = 'line' + (animate ? ' new' : '');
-  if (cls === '') {
-    div.innerHTML = '<span class="out blank"></span>';
+function renderChallenge(ch){
+  const wrap=document.createElement('div');wrap.className='line new';
+  const b=document.createElement('div');b.className='qblock';
+  if(ch.type==='quiz'){
+    b.innerHTML=`<div class="qq">⚔️ CHALLENGE: ${ch.q}</div><div class="qopts">${ch.opts.map((o,i)=>`<button class="qopt" data-i="${i}">${String.fromCharCode(65+i)}) ${o}</button>`).join('')}</div><div class="qres"></div>`;
+    wrap.appendChild(b);output.appendChild(wrap);
+    b.querySelectorAll('.qopt').forEach(btn=>btn.addEventListener('click',()=>answerQ(btn,ch,b)));
   } else {
-    const span = document.createElement('span');
-    span.className = 'out ' + cls;
-    span.style.whiteSpace = wordWrap ? 'pre-wrap' : 'pre';
-    span.textContent = text;
-    div.appendChild(span);
+    b.innerHTML=`<div class="qq">⌨️ TYPE IT: ${ch.prompt}</div><div class="qres"></div>`;
+    wrap.appendChild(b);output.appendChild(wrap);
+    appendLine('cd','  (type the exact command below and press Enter)');
   }
-  output.appendChild(div);
-  output.scrollTop = output.scrollHeight;
+  output.scrollTop=output.scrollHeight;
+}
+function answerQ(btn,ch,b){
+  const idx=parseInt(btn.dataset.i);
+  b.querySelectorAll('.qopt').forEach(x=>x.classList.add('disabled'));
+  const res=b.querySelector('.qres');
+  if(idx===ch.correct){
+    btn.classList.add('ok');
+    res.innerHTML=`<span class="cs">✓ Correct! +${ch.xp}xp +${ch.coins}🪙</span>`;
+    addXP(ch.xp,btn);addCoins(ch.coins,btn);
+    G.streak++;G.quizRight++;updHUD();checkAchs();
+    setTimeout(nextChallenge,1200);
+  } else {
+    btn.classList.add('no');
+    b.querySelectorAll('.qopt')[ch.correct].classList.add('ok');
+    res.innerHTML=`<span class="ce">✗ Wrong! Answer: ${ch.opts[ch.correct]}</span>`;
+    loseHP();
+    setTimeout(nextChallenge,1600);
+  }
+}
+function checkTypeAns(input){
+  const ch=G.challenge;
+  if(!ch||ch.type!=='type')return false;
+  if(input.trim().toLowerCase()===ch.answer.toLowerCase()){
+    appendLine('cs',`  ✓ Correct! +${ch.xp}xp +${ch.coins}🪙`);
+    addXP(ch.xp,rbtn);addCoins(ch.coins,rbtn);
+    G.streak++;G.quizRight++;updHUD();checkAchs();
+    G.challenge=null;setTimeout(nextChallenge,700);
+    return true;
+  }
+  return false;
+}
+function nextChallenge(){G.challengeIdx++;G.challenge=null;showChallenge();}
+function worldDone(){
+  const w=WORLDS[G.world];w.done=true;
+  if(G.world+1<WORLDS.length)WORLDS[G.world+1].locked=false;
+  renderMap();
+  appendLine('cy',`\n  🌟 WORLD COMPLETE! ${w.icon} ${w.label.replace('\n',' ')} 🌟`);
+  appendLine('cpk','  Bonus: +50xp  +15🪙');
+  addXP(50,output);addCoins(15,output);
+  toast(w.icon,'World Complete!','+50xp +15 coins');
+  G.skills[w.topic]=Math.min(100,(G.skills[w.topic]||0)+30);
+  updSkills();checkAchs();
 }
 
-function appendCmdLine(rawCmd) {
-  const div = document.createElement('div');
-  div.className = 'line cmd-line new';
-  div.innerHTML = `<span class="ps1">${inPS1.innerHTML}</span><span class="cmd-val">${escHtml(rawCmd)}</span>`;
-  output.appendChild(div);
-  output.scrollTop = output.scrollHeight;
+// ═══════════════════════════
+//  FILESYSTEM MOCK
+// ═══════════════════════════
+let cwd='/home/hero/quest';
+const FS={
+  '/home/hero/quest':{children:['index.html','README.md','package.json','src']},
+  '/home/hero/quest/src':{children:['main.js','style.css']},
+  '/home/hero':{children:['quest','notes.md','.bashrc']},
+  '/':{children:['home','etc','usr','tmp']},
+};
+function ps1HTML(){
+  const short=cwd.replace('/home/hero','~');
+  const w=WORLDS[G.world];
+  return `<span style="color:var(--pink2)">hero</span><span style="color:var(--dim)">@</span><span style="color:var(--teal)">${w.icon}quest</span> <span style="color:var(--blue)">${short}</span><span style="color:var(--green)"> $ </span>`;
 }
+function renderPS1(){ips1.innerHTML=ps1HTML();}
 
-function escHtml(s) {
-  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+// ═══════════════════════════
+//  COMMANDS
+// ═══════════════════════════
+const CMDS={
+  help:{run(){
+    return[
+      {c:'cy',v:'╔═══════════════════════════════════╗'},
+      {c:'cy',v:'║  🎮 TRYIT QUEST — COMMAND SCROLL  ║'},
+      {c:'cy',v:'╚═══════════════════════════════════╝'},
+      {c:'',v:''},
+      {c:'cpk',v:' 📁 NAVIGATION'},
+      {c:'cm',v:'  ls [-la]    list files'},
+      {c:'cm',v:'  cd [dir]    change directory'},
+      {c:'cm',v:'  pwd         print working dir'},
+      {c:'cm',v:'  cat [file]  read file'},
+      {c:'cm',v:'  tree        directory tree'},
+      {c:'',v:''},
+      {c:'cpk',v:' 🌿 GIT SPELLS'},
+      {c:'cm',v:'  git status / log / diff / add / commit'},
+      {c:'',v:''},
+      {c:'cpk',v:' 🖥  SYSTEM'},
+      {c:'cm',v:'  whoami / date / uname / env / uptime'},
+      {c:'cm',v:'  echo [text] / history / clear'},
+      {c:'',v:''},
+      {c:'cpk',v:' 🎮 GAME'},
+      {c:'cm',v:'  quiz         start a challenge'},
+      {c:'cm',v:'  stats        your hero stats'},
+      {c:'cm',v:'  shop         item shop'},
+      {c:'cm',v:'  next         go to next world'},
+      {c:'cy',v:'\n  ★ Correct answers earn XP & coins! ★'},
+    ];
+  }},
+  ls:{run(a){
+    const long=a.some(x=>['-la','-l','-a'].includes(x));
+    const node=FS[cwd]||{children:[]};
+    const items=node.children||[];
+    G.skills.linux=Math.min(100,G.skills.linux+1);
+    if(!long)return[{c:'ci',v:items.join('   ')}];
+    const d=new Date(),mon=d.toLocaleString('en',{month:'short'}),day=String(d.getDate()).padStart(2);
+    return[{c:'cd',v:`total ${items.length*4}`},...items.map(i=>({
+      c:FS[cwd+'/'+i]?'cp':'ct',
+      v:`${FS[cwd+'/'+i]?'drwxr-xr-x':'-rw-r--r--'}  1 hero staff ${String(Math.floor(Math.random()*5000+100)).padStart(6)} ${mon} ${day} ${i}`
+    }))];
+  }},
+  pwd:{run(){G.skills.linux=Math.min(100,G.skills.linux+1);return[{c:'ct',v:cwd}]}},
+  cd:{run(a){
+    G.skills.linux=Math.min(100,G.skills.linux+1);
+    const t=a[0]||'/home/hero';
+    let n=t.startsWith('/')?t:cwd+'/'+t;
+    n=n.split('/').reduce((acc,p)=>{if(p==='..')acc.pop();else if(p&&p!=='.')acc.push(p);return acc;},[]).join('/')||'/';
+    if(!n.startsWith('/'))n='/'+n;
+    if(FS[n]){cwd=n;renderPS1();return[];}
+    return[{c:'ce',v:`cd: ${t}: No such file or directory`}];
+  }},
+  cat:{run(a){
+    if(!a[0])return[{c:'ce',v:'cat: missing operand'}];
+    G.skills.linux=Math.min(100,G.skills.linux+1);
+    const FILES={
+      'README.md':[{c:'cy',v:'# 🎮 tryit — Study Quest'},{c:'',v:''},{c:'ct',v:'Learn terminal commands through adventure!'},{c:'cm',v:'Complete worlds, earn XP, defeat Bowser!'}],
+      'index.html':[{c:'cm',v:'<!DOCTYPE html>...'},{c:'cd',v:'<!-- the game you\'re playing right now -->'}],
+      'package.json':[{c:'ct',v:'{'},{c:'cc',v:'  "name": "tryit",'},{c:'cc',v:'  "version": "2.0.0",'},{c:'cc',v:'  "description": "gamified terminal study quest"'},{c:'ct',v:'}'}],
+      'notes.md':[{c:'ct',v:'# Hero Notes'},{c:'cm',v:'- Complete all 7 worlds'},{c:'cm',v:'- Collect all 8 achievements'},{c:'cm',v:'- Reach level 9 max'}],
+      '.bashrc':[{c:'cd',v:'# hero .bashrc'},{c:'cd',v:'alias quest="tryit"'},{c:'cd',v:'export HERO_LEVEL='+G.level}],
+      'main.js':[{c:'cc',v:'// tryit quest engine'},{c:'ct',v:'const hero = { xp: '+G.xp+', level: '+G.level+' };'}],
+      'style.css':[{c:'cm',v:'/* kirby-pink theme */'},{c:'cm',v:':root { --pink: #ff6eb4; }'}],
+    };
+    const name=a[0].split('/').pop();
+    return FILES[name]||[{c:'ce',v:`cat: ${a[0]}: No such file`}];
+  }},
+  echo:{run(a){return[{c:'ct',v:a.join(' ')}]}},
+  whoami:{run(){return[{c:'ct',v:`hero (level ${G.level} adventurer, ${G.xp} xp)`}]}},
+  date:{run(){return[{c:'ct',v:new Date().toString()}]}},
+  uname:{run(a){return[{c:'ct',v:a.includes('-a')?'TryitOS 2.0 quest-kernel x86_64 GNU/Linux':'TryitOS'}]}},
+  uptime:{run(){const s=Math.floor(performance.now()/1000),h=Math.floor(s/3600),m=Math.floor((s%3600)/60);return[{c:'ct',v:` up ${h}h ${m}m — ${G.cmdCount} commands run — streak: ${G.streak}`}]}},
+  history:{run(){if(!G.hist.length)return[{c:'cm',v:'no history yet'}];return G.hist.map((h,i)=>({c:'ct',v:`  ${String(i+1).padStart(4)}  ${h}`}))}},
+  tree:{run(){return[{c:'ct',v:'.'},{c:'cp',v:'├── index.html'},{c:'cp',v:'├── README.md'},{c:'cp',v:'├── package.json'},{c:'cp',v:'└── src/'},{c:'cp',v:'    ├── main.js'},{c:'cp',v:'    └── style.css'},{c:'',v:''},{c:'cm',v:'1 directory, 5 files'}]}},
+  clear:{run(){return'__CLEAR__'}},
+  'git status':{run(){
+    G.skills.git=Math.min(100,G.skills.git+2);updSkills();
+    return[
+      {c:'ci',v:'On branch main'},
+      {c:'ct',v:"Your branch is up to date with 'origin/main'."},
+      {c:'',v:''},
+      {c:'cw',v:'Changes not staged for commit:'},
+      {c:'ce',v:'        modified:   index.html'},
+      {c:'',v:''},
+      {c:'cm',v:'no changes added to commit'},
+    ];
+  }},
+  'git log':{run(a){
+    G.skills.git=Math.min(100,G.skills.git+2);
+    const ol=a.includes('--oneline');
+    const cs=[
+      {h:'a3f9c12',m:'feat: add Kirby story mode & gamification'},
+      {h:'b81d2fe',m:'feat: XP, coins, achievements, quiz engine'},
+      {h:'c44a801',m:'feat: world map, tabs, challenges'},
+      {h:'d112ff0',m:'init: project scaffold'},
+    ];
+    if(ol)return cs.map(c=>({c:'cp',v:`${c.h} ${c.m}`}));
+    return cs.flatMap(c=>[{c:'cp',v:`commit ${c.h}`},{c:'ct',v:`    ${c.m}`},{c:'',v:''}]);
+  }},
+  'git diff':{run(){return[{c:'cs',v:'+  // Kirby story mode'},{c:'cs',v:'+  // XP/coins/achievements'},{c:'ce',v:'-  // boring old terminal'}]}},
+  'git add':{run(){G.skills.git=Math.min(100,G.skills.git+2);return[{c:'cm',v:'Changes staged. Run: git commit -m "message"'}]}},
+  'git commit':{run(a){
+    G.skills.git=Math.min(100,G.skills.git+3);
+    const m=a.slice(a.indexOf('-m')+1).join(' ').replace(/"/g,'')||'update';
+    addXP(10,rbtn);addCoins(2,rbtn);
+    return[{c:'cs',v:`[main a1b2c3] ${m}`},{c:'cs',v:'1 file changed, 1 insertion(+)'}];
+  }},
+  'npm run dev':{run(){return[{c:'ci',v:'> tryit@2.0.0 dev'},{c:'',v:''},{c:'cs',v:'  VITE v5.2  ready in 241ms'},{c:'ct',v:'  ➜  Local: http://localhost:5173/'}]}},
+  'npm install':{run(){return[{c:'cs',v:'added 42 packages in 1.4s'},{c:'cm',v:'3 packages are looking for funding'}]}},
+  env:{run(){return[{c:'ct',v:`USER=hero`},{c:'ct',v:`LEVEL=${G.level}`},{c:'ct',v:`XP=${G.xp}`},{c:'ct',v:`COINS=${G.coins}`},{c:'ct',v:`WORLD=${WORLDS[G.world].icon} ${WORLDS[G.world].label.replace('\n',' ')}`},{c:'ct',v:`STREAK=${G.streak}`}]}},
+  ping:{run(a){const h=a[0]||'localhost';return[{c:'ct',v:`PING ${h}`},{c:'cs',v:`64 bytes: icmp_seq=0 time=0.12ms`},{c:'cs',v:`64 bytes: icmp_seq=1 time=0.09ms`},{c:'ct',v:`3 packets: 0% loss`}]}},
+  curl:{run(a){const u=a.find(x=>!x.startsWith('-'))||'';return u?[{c:'cm',v:`  % Total    % Received % Xferd`},{c:'ct',v:`{"status":"ok","url":"${u}"}`}]:[{c:'ce',v:'curl: no URL specified'}]}},
+  quiz:{run(){
+    if(!G.storyDone)return[{c:'cw',v:'Finish the story first! (press Enter)'}];
+    G.storyDone=false;
+    const list=CHALLENGES[WORLDS[G.world].topic]||CHALLENGES.intro;
+    G.challengeIdx=0;G.challenge=null;
+    clearOutput();
+    appendLine('cy','  ⚔️ Challenge mode! Answer to earn XP!');
+    appendLine('','');
+    setTimeout(showChallenge,400);
+    return[];
+  }},
+  next:{run(){
+    if(G.world<WORLDS.length-1){enterWorld(G.world+1);return[{c:'cs',v:'Moving to next world…'}];}
+    return[{c:'cw',v:'You\'re at the final world! Type "quiz" to fight the boss!'}];
+  }},
+  stats:{run(){return[
+    {c:'cy',v:'╔══════════════════════════════╗'},
+    {c:'cy',v:'║      ⚔️  HERO STATS  ⚔️      ║'},
+    {c:'cy',v:'╚══════════════════════════════╝'},
+    {c:'',v:''},
+    {c:'cpk',v:`  Level   : ${G.level}`},
+    {c:'cpk',v:`  XP      : ${G.xp}`},
+    {c:'cpk',v:`  Coins   : ${G.coins}`},
+    {c:'cpk',v:`  HP      : ${'♥'.repeat(G.hp)}${'♡'.repeat(G.maxHp-G.hp)}`},
+    {c:'cpk',v:`  Streak  : ${G.streak}`},
+    {c:'cpk',v:`  World   : ${WORLDS[G.world].icon} ${WORLDS[G.world].label.replace('\n',' ')}`},
+    {c:'',v:''},
+    {c:'cy',v:`  Achievements  : ${G.achievements.size} / ${ACHS.length}`},
+    {c:'cy',v:`  Git skill     : ${G.skills.git}%`},
+    {c:'cy',v:`  Linux skill   : ${G.skills.linux}%`},
+    {c:'cy',v:`  Commands run  : ${G.cmdCount}`},
+  ];}},
+  shop:{run(){return[
+    {c:'cy',v:'🛒 ITEM SHOP'},
+    {c:'',v:''},
+    {c:'cm',v:'  🍄 Mushroom     10🪙  Restore 1 HP'},
+    {c:'cm',v:'  🔥 Fire Flower  15🪙  Reveal answer'},
+    {c:'cm',v:'  ⭐ Super Star   25🪙  2× XP for 60s'},
+    {c:'cm',v:'  🔔 Tanooki      20🪙  Skip challenge'},
+    {c:'',v:''},
+    {c:'cd',v:'  Shop coming in v2.1 — earn coins now!'},
+  ];}},
+};
+
+// ═══════════════════════════
+//  SUGGESTIONS
+// ═══════════════════════════
+const SUGS=['help','ls -la','pwd','git status','git log --oneline','quiz','stats','next','cat README.md','echo hello','clear','shop'];
+function renderSugs(f=''){
+  const items=f?SUGS.filter(s=>s.startsWith(f)&&s!==f):SUGS;
+  sugbar.innerHTML='';
+  items.slice(0,9).forEach(s=>{
+    const el=document.createElement('span');el.className='sug';el.textContent=s;
+    el.addEventListener('click',()=>{cin.value=s;cin.focus();});
+    sugbar.appendChild(el);
+  });
 }
+renderSugs();
 
-function clearOutput() {
-  output.innerHTML = '';
-  tabs[activeTab].lines = [];
+// ═══════════════════════════
+//  OUTPUT
+// ═══════════════════════════
+function appendLine(cls,text,animate=true){
+  const d=document.createElement('div');d.className='line'+(animate?' new':'');
+  if(!cls&&!text){d.innerHTML='<span style="display:block;height:.4em"></span>';}
+  else{
+    const s=document.createElement('span');
+    s.className='out '+(cls||'ct');
+    s.style.whiteSpace=G.wrap?'pre-wrap':'pre';
+    s.textContent=text??'';
+    d.appendChild(s);
+  }
+  output.appendChild(d);output.scrollTop=output.scrollHeight;
 }
+function appendCmdLine(raw){
+  const d=document.createElement('div');d.className='line cline new';
+  d.innerHTML=`<span class="ps1s">${ips1.innerHTML}</span><span style="color:var(--teal)">${esc(raw)}</span>`;
+  output.appendChild(d);output.scrollTop=output.scrollHeight;
+}
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function clearOutput(){output.innerHTML='';G.tabs[G.tab].lines=[];}
 
-// ─────────────────────────────────────────────
-//  COMMAND RUNNER
-// ─────────────────────────────────────────────
-function runCmd(raw) {
-  raw = raw.trim();
-  if (!raw) return;
-  cmdHistory.unshift(raw);
-  histIdx = -1;
-  histPill.textContent = `${cmdHistory.length} cmd${cmdHistory.length !== 1 ? 's' : ''}`;
-
+// ═══════════════════════════
+//  RUN
+// ═══════════════════════════
+function runCmd(raw){
+  raw=raw.trim();if(!raw)return;
+  if(!G.storyDone){advStory();return;}
+  G.hist.unshift(raw);G.histI=-1;G.cmdCount++;
   appendCmdLine(raw);
-  setStatus('running', 'busy');
+  setSt('running','busy');
 
-  setTimeout(() => {
-    const [cmd, ...args] = raw.split(/\s+/);
-    const full = raw.toLowerCase();
-
-    let result;
-    if (CMDS[full]) result = CMDS[full].run(args);
-    else if (CMDS[cmd.toLowerCase()]) result = CMDS[cmd.toLowerCase()].run(args);
-    else {
-      result = [
-        {c:'e', v:`${cmd}: command not found`},
-        {c:'d', v:`type 'help' for available commands`},
-      ];
-      lastExit = 127;
-      exitSt.textContent = 'exit 127';
-      setStatus('error', 'err');
-      goto_end(result);
-      return;
-    }
-
-    if (result === '__CLEAR__') { clearOutput(); setStatus('ready', 'ok'); return; }
-
-    lastExit = 0;
-    exitSt.textContent = 'exit 0';
-    goto_end(result);
-  }, 80);
-}
-
-function goto_end(result) {
-  if (Array.isArray(result)) {
-    result.forEach(r => appendLine(r.c || 't', r.v ?? ''));
+  if(G.challenge&&G.challenge.type==='type'){
+    if(checkTypeAns(raw)){setSt('ready','ok');saveTL();return;}
   }
-  setStatus('ready', 'ok');
-  saveTabLines();
-}
 
-function setStatus(msg, state) {
-  statusMsg.textContent = msg;
-  statusDot.className = 'status-dot' + (state === 'busy' ? ' busy' : state === 'err' ? ' err' : '');
-}
+  setTimeout(()=>{
+    const tok=raw.split(/\s+/);
+    const cmd=tok[0].toLowerCase();
+    const args=tok.slice(1);
+    const full=raw.toLowerCase().replace(/\s+/,' ');
 
-// ─────────────────────────────────────────────
-//  SEARCH
-// ─────────────────────────────────────────────
-let hlIndex = 0;
-function doSearch(q) {
-  clearSearch();
-  if (!q) { searchCount.textContent = '0'; return; }
-  const spans = output.querySelectorAll('.out');
-  let count = 0, firstEl = null;
-  spans.forEach(span => {
-    const text = span.textContent;
-    const re = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'), 'gi');
-    if (re.test(text)) {
-      span.innerHTML = span.textContent.replace(re, m => {
-        count++;
-        return `<mark class="highlight">${escHtml(m)}</mark>`;
-      });
-      if (!firstEl) firstEl = span.querySelector('mark');
+    let res;
+    if(CMDS[full])res=CMDS[full].run(args);
+    else if(CMDS[cmd])res=CMDS[cmd].run(args);
+    else{
+      res=[{c:'ce',v:`${tok[0]}: command not found`},{c:'cd',v:"type 'help' for commands"}];
+      setSt('error','err');G.streak=0;updHUD();
+      procRes(res);return;
     }
-  });
-  searchCount.textContent = String(count);
-  if (firstEl) {
-    firstEl.classList.add('active-hl');
-    firstEl.scrollIntoView({ block: 'center' });
-  }
+    if(res==='__CLEAR__'){clearOutput();setSt('ready','ok');return;}
+    G.streak++;updHUD();checkAchs();
+    if(G.cmdCount>1)addXP(2,rbtn);
+    procRes(res);
+    updSkills();
+  },65);
 }
-function clearSearch() {
-  output.querySelectorAll('mark.highlight').forEach(m => {
-    m.replaceWith(document.createTextNode(m.textContent));
+function procRes(res){
+  if(Array.isArray(res))res.forEach(r=>appendLine(r.c||'ct',r.v??''));
+  setSt('ready','ok');saveTL();
+}
+function setSt(msg,state){smsg.textContent=msg;sdot.className='sdot'+(state==='busy'?' busy':state==='err'?' err':'');}
+
+// ═══════════════════════════
+//  TABS
+// ═══════════════════════════
+function renderTabs(){
+  ttabs.innerHTML='';
+  G.tabs.forEach((t,i)=>{
+    const el=document.createElement('div');el.className='ttab'+(i===G.tab?' active':'');
+    el.textContent=t.name;el.addEventListener('click',()=>switchTab(i));
+    ttabs.appendChild(el);
   });
-  output.querySelectorAll('.out').forEach(s => {
-    const t = s.textContent;
-    s.textContent = t; // normalise
+}
+function switchTab(i){saveTL();G.tab=i;renderTabs();loadTL();renderPS1();}
+function saveTL(){G.tabs[G.tab].lines=Array.from(output.children).map(e=>e.outerHTML);}
+function loadTL(){output.innerHTML=G.tabs[G.tab].lines.join('');output.scrollTop=output.scrollHeight;}
+function newTab(){
+  saveTL();G.tabN++;
+  G.tabs.push({id:G.tabN,name:`bash ${G.tabN}`,lines:[]});
+  G.tab=G.tabs.length-1;renderTabs();loadTL();
+  appendLine('cm',`new tab — bash ${G.tabN}`);cin.focus();
+}
+
+// ═══════════════════════════
+//  SIDE PANEL
+// ═══════════════════════════
+function updSkills(){if(G.sTab==='skills')renderSkills();}
+function renderSkills(){
+  scontent.innerHTML='';
+  const dc=document.createElement('div');dc.className='daily';
+  dc.innerHTML=`<div class="daily-t">⚡ Daily Challenge</div><div class="daily-d">Complete 3 quizzes\ntoday for 30 bonus coins!</div><button class="daily-btn" onclick="cin.value='quiz';cin.focus()">▶ Start Quiz →</button>`;
+  scontent.appendChild(dc);
+  [{k:'linux',i:'🐧',n:'Linux'},{k:'git',i:'🌿',n:'Git'},{k:'js',i:'⚡',n:'JavaScript'},{k:'bash',i:'💻',n:'Bash'},{k:'python',i:'🐍',n:'Python'}].forEach(s=>{
+    const v=G.skills[s.k]||0;
+    const el=document.createElement('div');el.className='skill';
+    el.innerHTML=`<div class="skill-ico">${s.i}</div><div class="skill-info"><div class="skill-name">${s.n} — ${v}%</div><div class="skill-bar"><div class="skill-fill" style="width:${v}%"></div></div></div>`;
+    scontent.appendChild(el);
+  });
+}
+function renderInv(){
+  scontent.innerHTML='<div style="font-family:var(--font-game);font-size:6px;color:var(--dim);margin-bottom:8px">🎒 ITEM BAG</div>';
+  const grid=document.createElement('div');grid.className='inv-grid';
+  const ITEMS=['⭐','🍄','🔥','🔔','💎','🦸','🌟','🪙'];
+  for(let i=0;i<16;i++){
+    const sl=document.createElement('div');
+    sl.className='islot'+(i<ITEMS.length?' ':' empty');
+    sl.textContent=i<ITEMS.length?ITEMS[i]:'·';
+    if(i<ITEMS.length)sl.title='Item '+ITEMS[i];
+    grid.appendChild(sl);
+  }
+  scontent.appendChild(grid);
+  const n=document.createElement('div');
+  n.style.cssText='font-family:var(--font-game);font-size:5.5px;color:var(--dim);line-height:2';
+  n.textContent='Items unlock as you\nprogress through worlds!';
+  scontent.appendChild(n);
+}
+function renderLB(){
+  scontent.innerHTML='<div style="font-family:var(--font-game);font-size:6px;color:var(--dim);margin-bottom:8px">🏆 LEADERBOARD</div>';
+  const rows=[
+    {av:'👑',name:'ProCoder99',score:8420},{av:'🦸',name:'gitmaster',score:7100},
+    {av:'🐱',name:'bash_witch',score:5830},{av:'🎮',name:'YOU',score:G.xp,me:true},
+    {av:'🤖',name:'codez4eva',score:3200},{av:'🍄',name:'toadcoder',score:2100},
+  ].sort((a,b)=>b.score-a.score).map((r,i)=>({...r,rank:i+1}));
+  rows.forEach(r=>{
+    const el=document.createElement('div');el.className='lbrow'+(r.me?' me':'');
+    el.innerHTML=`<div class="lbrank">${r.rank}</div><div class="lbav">${r.av}</div><div class="lbname">${r.name}</div><div class="lbscore">${r.score}</div>`;
+    scontent.appendChild(el);
   });
 }
 
-// ─────────────────────────────────────────────
+document.querySelectorAll('.stab').forEach(tab=>{
+  tab.addEventListener('click',()=>{
+    document.querySelectorAll('.stab').forEach(t=>t.classList.remove('active'));
+    tab.classList.add('active');G.sTab=tab.dataset.s;
+    if(G.sTab==='skills')renderSkills();
+    else if(G.sTab==='inv')renderInv();
+    else renderLB();
+  });
+});
+
+// ═══════════════════════════
 //  CLOCK
-// ─────────────────────────────────────────────
-function tick() {
-  clockSt.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-}
-tick();
-setInterval(tick, 1000);
+// ═══════════════════════════
+setInterval(()=>{sclock.textContent=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'})},1000);
 
-// ─────────────────────────────────────────────
+// ═══════════════════════════
 //  EVENTS
-// ─────────────────────────────────────────────
-runBtn.addEventListener('click', () => {
-  const v = cmdIn.value; cmdIn.value = ''; renderSuggestions(); runCmd(v); cmdIn.focus();
-});
-
-cmdIn.addEventListener('keydown', e => {
-  if (e.key === 'Enter') {
-    const v = cmdIn.value; cmdIn.value = ''; renderSuggestions(); runCmd(v);
-  } else if (e.key === 'ArrowUp') {
+// ═══════════════════════════
+rbtn.addEventListener('click',()=>{const v=cin.value;cin.value='';renderSugs();runCmd(v);cin.focus();});
+cin.addEventListener('keydown',e=>{
+  if(e.key==='Enter'){const v=cin.value;cin.value='';renderSugs();runCmd(v);}
+  else if(e.key==='ArrowUp'){e.preventDefault();if(G.histI<G.hist.length-1){G.histI++;cin.value=G.hist[G.histI];}}
+  else if(e.key==='ArrowDown'){e.preventDefault();if(G.histI>0){G.histI--;cin.value=G.hist[G.histI];}else{G.histI=-1;cin.value='';}}
+  else if(e.key==='Tab'){
     e.preventDefault();
-    if (histIdx < cmdHistory.length - 1) { histIdx++; cmdIn.value = cmdHistory[histIdx]; }
-  } else if (e.key === 'ArrowDown') {
-    e.preventDefault();
-    if (histIdx > 0) { histIdx--; cmdIn.value = cmdHistory[histIdx]; }
-    else { histIdx = -1; cmdIn.value = ''; }
-  } else if (e.key === 'Tab') {
-    e.preventDefault();
-    const v = cmdIn.value.toLowerCase();
-    const matches = ALL_SUGGESTIONS.filter(s => s.startsWith(v) && s !== v);
-    if (matches.length === 1) cmdIn.value = matches[0];
-    else if (matches.length > 1) {
-      appendCmdLine(cmdIn.value);
-      appendLine('d', matches.join('   '));
-      saveTabLines();
-    }
+    const v=cin.value.toLowerCase();
+    const m=SUGS.filter(s=>s.startsWith(v)&&s!==v);
+    if(m.length===1)cin.value=m[0];
+    else if(m.length>1){appendCmdLine(cin.value);appendLine('cd',m.join('   '));saveTL();}
   }
 });
+cin.addEventListener('input',()=>renderSugs(cin.value.toLowerCase()));
 
-cmdIn.addEventListener('input', () => {
-  renderSuggestions(cmdIn.value.toLowerCase());
+document.getElementById('btnClear').addEventListener('click',()=>{clearOutput();cin.focus();});
+document.getElementById('btnWrap').addEventListener('click',function(){
+  G.wrap=!G.wrap;this.classList.toggle('on',G.wrap);
+  output.querySelectorAll('.out').forEach(el=>el.style.whiteSpace=G.wrap?'pre-wrap':'pre');
+});
+document.getElementById('btnHint').addEventListener('click',()=>{
+  if(G.coins<1){toast('💸','No Coins!','Earn coins by answering quizzes');return;}
+  if(!G.challenge){appendLine('cm','  💡 Type "quiz" to start a challenge first');return;}
+  G.coins=Math.max(0,G.coins-1);updHUD();
+  const ch=G.challenge;
+  if(ch.type==='quiz')appendLine('cs',`  💡 Hint: the answer starts with "${ch.opts[ch.correct][0]}"`);
+  else appendLine('cs',`  💡 Hint: "${ch.answer.slice(0,Math.ceil(ch.answer.length/2))}…"`);
+});
+document.getElementById('btnSkip').addEventListener('click',()=>{
+  if(!G.challenge){appendLine('cm','  No active challenge.');return;}
+  appendLine('cw','  ⏭ Skipped (no XP earned)');
+  G.challenge=null;G.challengeIdx++;setTimeout(showChallenge,500);
+});
+addTab.addEventListener('click',newTab);
+lvlupBtn.addEventListener('click',()=>{lvlupEl.style.display='none';cin.focus();});
+document.getElementById('btnSave').addEventListener('click',()=>{
+  try{localStorage.setItem('tryit_v2',JSON.stringify({xp:G.xp,level:G.level,coins:G.coins,hp:G.hp,skills:G.skills,achievements:[...G.achievements],world:G.world}));}catch(e){}
+  toast('💾','Game Saved!','Progress stored locally');
+});
+document.getElementById('btnSound').addEventListener('click',function(){this.classList.toggle('on');});
+document.addEventListener('keydown',e=>{
+  if((e.ctrlKey||e.metaKey)&&e.key==='l'){e.preventDefault();clearOutput();}
+  if(e.key==='Enter'&&document.activeElement!==cin)advStory();
+});
+document.querySelector('.tpanel').addEventListener('click',e=>{
+  if(!e.target.closest('.tbar')&&!e.target.closest('.story')&&!e.target.closest('.qblock'))cin.focus();
 });
 
-clearBtn.addEventListener('click', () => { clearOutput(); cmdIn.focus(); });
-
-wrapBtn.addEventListener('click', () => {
-  wordWrap = !wordWrap;
-  wrapBtn.classList.toggle('on', wordWrap);
-  output.querySelectorAll('.out').forEach(el => {
-    el.style.whiteSpace = wordWrap ? 'pre-wrap' : 'pre';
-  });
-});
-wrapBtn.classList.add('on');
-
-helpBtn.addEventListener('click', () => {
-  helpOpen = !helpOpen;
-  helpPanel.classList.toggle('open', helpOpen);
-  helpBtn.classList.toggle('on', helpOpen);
-});
-
-document.addEventListener('click', e => {
-  if (helpOpen && !helpPanel.contains(e.target) && e.target !== helpBtn) {
-    helpOpen = false;
-    helpPanel.classList.remove('open');
-    helpBtn.classList.remove('on');
+// ═══════════════════════════
+//  LOAD SAVE
+// ═══════════════════════════
+try{
+  const sv=JSON.parse(localStorage.getItem('tryit_v2')||'null');
+  if(sv){
+    G.xp=sv.xp||0;G.level=sv.level||1;G.coins=sv.coins||0;G.hp=sv.hp||3;
+    if(sv.skills)Object.assign(G.skills,sv.skills);
+    if(sv.achievements)sv.achievements.forEach(a=>G.achievements.add(a));
+    if(sv.world){G.world=sv.world;WORLDS.forEach((w,i)=>{if(i<=G.world)w.locked=false;});}
   }
-});
+}catch(e){}
 
-newTab.addEventListener('click', addTab);
-
-searchBtn.addEventListener('click', openSearch);
-searchClose.addEventListener('click', closeSearch);
-searchIn.addEventListener('input', () => doSearch(searchIn.value));
-searchIn.addEventListener('keydown', e => { if (e.key === 'Escape') closeSearch(); });
-
-function openSearch() {
-  searchOpen = true;
-  searchBar.classList.add('open');
-  searchBtn.classList.add('on');
-  searchIn.focus();
-}
-function closeSearch() {
-  searchOpen = false;
-  searchBar.classList.remove('open');
-  searchBtn.classList.remove('on');
-  clearSearch();
-  searchCount.textContent = '0';
-}
-
-document.addEventListener('keydown', e => {
-  if ((e.ctrlKey || e.metaKey) && e.key === 'f') { e.preventDefault(); openSearch(); }
-  if ((e.ctrlKey || e.metaKey) && e.key === 'l') { e.preventDefault(); clearOutput(); }
-  if ((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); clearOutput(); }
-});
-
-// focus input on any keypress in the terminal area
-document.getElementById('shell').addEventListener('click', e => {
-  if (!e.target.closest('.titlebar') && !e.target.closest('.help-panel') &&
-      !e.target.closest('.search-bar') && !e.target.closest('.suggestions')) {
-    cmdIn.focus();
-  }
-});
-
-// ─────────────────────────────────────────────
+// ═══════════════════════════
 //  BOOT
-// ─────────────────────────────────────────────
-renderTabs();
-renderPS1(inPS1);
-setStatus('ready', 'ok');
+// ═══════════════════════════
+renderTabs();renderPS1();renderMap();renderSkills();updHUD();
+setSt('ready','ok');
 
-const BOOT = [
-  {c:'s', v:'██████╗ ██████╗ ██╗   ██╗██╗████████╗'},
-  {c:'s', v:'╚══██╔╝██╔══██╗╚██╗ ██╔╝██║╚══██╔══╝'},
-  {c:'s', v:'   ██║ ██████╔╝ ╚████╔╝ ██║   ██║   '},
-  {c:'s', v:'   ██║ ██╔══██╗  ╚██╔╝  ██║   ██║   '},
-  {c:'s', v:'   ██║ ██║  ██║   ██║   ██║   ██║   '},
-  {c:'s', v:'   ╚═╝ ╚═╝  ╚═╝   ╚═╝   ╚═╝   ╚═╝   '},
-  {c:'', v:''},
-  {c:'i', v:'  interactive terminal playground  v1.0.0'},
-  {c:'', v:''},
-  {c:'d', v:'  ↑↓ history   Tab autocomplete   Ctrl+F search'},
-  {c:'d', v:'  Ctrl+L clear   + new tab   ? commands'},
-  {c:'', v:''},
-  {c:'m', v:"  type 'help' to list all commands."},
-  {c:'', v:''},
+const BOOT=[
+  {c:'cy',v:' ████████╗██████╗ ██╗   ██╗██╗████████╗'},
+  {c:'cy',v:'    ██╔══╝██╔══██╗╚██╗ ██╔╝██║╚══██╔══╝'},
+  {c:'cpk',v:'    ██║   ██████╔╝ ╚████╔╝ ██║   ██║   '},
+  {c:'cpk',v:'    ██║   ██╔══██╗  ╚██╔╝  ██║   ██║   '},
+  {c:'cy',v:'    ██║   ██║  ██║   ██║   ██║   ██║   '},
+  {c:'cy',v:'    ╚═╝   ╚═╝  ╚═╝   ╚═╝   ╚═╝   ╚═╝   '},
+  {c:'',v:''},
+  {c:'cm',v:'  🎮 Study Quest v2.0  — Kirby × Mario Edition'},
+  {c:'cpk',v:'  ✦ Complete worlds  ✦ Earn XP & coins  ✦ Level up'},
+  {c:'',v:''},
+  {c:'cd',v:'  ↑↓ history   Tab autocomplete   💡 hint (1🪙)'},
+  {c:'cd',v:'  ⏭ skip   💾 auto-save   ⚔️ quiz to challenge'},
+  {c:'',v:''},
 ];
-
-BOOT.forEach((l, i) => {
-  setTimeout(() => {
-    appendLine(l.c, l.v, false);
-    if (i === BOOT.length - 1) saveTabLines();
-  }, i * 28);
-});
+BOOT.forEach((l,i)=>setTimeout(()=>{
+  appendLine(l.c,l.v,false);
+  if(i===BOOT.length-1){
+    G.tabs[G.tab].lines=Array.from(output.children).map(e=>e.outerHTML);
+    setTimeout(()=>{queueStory(STORIES.intro);cin.focus();},350);
+  }
+},i*28));
 </script>
 </body>
 </html>
